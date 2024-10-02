@@ -81,7 +81,9 @@ NLP
     ● Микросервис, поднимаемый через Docker Compose
     ● Графики и элементы взаимодействия отображаются в streamlit 
 Как хотелось бы, чтобы выглядела система, будет обновляться:
-![alt text](data/IMG_5149.jpeg)
+
+<img src="https://github.com/user-attachments/assets/98d4be79-cd1c-424e-b399-d032c9d681af" alt="System design" height="400">
+
 Общее:
 
     ● Выбор базы знаний для авторекомендаций, парсинг/ обработка.
