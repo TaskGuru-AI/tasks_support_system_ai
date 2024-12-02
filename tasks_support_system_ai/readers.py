@@ -2,9 +2,12 @@ import pandas as pd
 from ast import literal_eval
 from collections import defaultdict, deque
 from itertools import chain
+from tasks_support_system_ai.utils import data_checker
 
 
 def read_ts_tree(path: str) -> pd.DataFrame:
+    if not data_checker.check_data_availability([path]):
+        return pd.DataFrame()
     tree = pd.read_csv(
         path,
         sep="\t",
@@ -28,6 +31,8 @@ def read_ts_tree(path: str) -> pd.DataFrame:
 
 
 def read_proper_ts_tree(path: str) -> pd.DataFrame:
+    if not data_checker.check_data_availability([path]):
+        return pd.DataFrame()
     tree = pd.read_csv(
         path,
         converters={
@@ -197,6 +202,8 @@ def has_cycle(graph):
 
 
 def ts_read_daily_tickets(path: str) -> pd.DataFrame:
+    if not data_checker.check_data_availability([path]):
+        return pd.DataFrame()
     df = pd.read_csv(path, sep=";")
     df["date"] = pd.to_datetime(df["date"], format="%d.%m.%Y")
     return df

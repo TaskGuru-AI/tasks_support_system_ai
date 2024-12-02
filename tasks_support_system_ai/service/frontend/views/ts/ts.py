@@ -8,6 +8,33 @@ st.title("Анализ нагрузки очередей")
 
 
 @st.cache_data(ttl=600)
+def check_data_availability():
+    try:
+        response = requests.get(f"{API_URL}/api/data-status")
+        return response.json()["has_data"]
+    except requests.exceptions.RequestException:
+        return False
+
+
+if not check_data_availability():
+    st.warning("⚠️ Данные временно недоступны")
+    st.markdown("""
+        ## Как получить доступ к данным:
+        ### Хороший вариант
+        1. Устновите git lfs, запустите `git lfs install`
+        2. Склонируйте репозиторий
+
+
+        ### Запасной вариант
+        1. Убедитесь, что у вас есть доступ к репозиторию с данными https://drive.google.com/drive/folders/14b6lcjdD4IZNkyiVbwLm3H_2K3ZXt2HX?usp=sharing
+        2. Скачайте данные из папки data
+        3. Разместите их в локальном репозитории в папке `./data/`
+        4. Установить just и запустите `just generate_data`
+    """)
+    st.stop()
+
+
+@st.cache_data(ttl=600)
 def fetch_queues():
     try:
         response = requests.get(f"{API_URL}/api/queues")
@@ -27,7 +54,7 @@ if queues:
         key="queue_selector",
     )
     st.sidebar.markdown("### Настройки прогноза")
-    days_ahead = st.sidebar.slider("Дней вперед", 1, 30, 25)
+    days_ahead = st.sidebar.slider("Дней вперед", 1, 300, 25)
     show_prediction = st.sidebar.checkbox("Показать прогноз", value=True)
 
     if selected_queue:

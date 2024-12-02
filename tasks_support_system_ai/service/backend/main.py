@@ -3,10 +3,11 @@ from pydantic import BaseModel
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
 from tasks_support_system_ai.ts.prediction import predict_ts
-from tasks_support_system_ai.utils import get_correct_data_path
+from tasks_support_system_ai.utils import get_correct_data_path, data_checker
 from tasks_support_system_ai.readers import read_proper_ts_tree, ts_read_daily_tickets
 
 df = ts_read_daily_tickets(get_correct_data_path("tickets_daily/tickets_daily.csv"))
+tree = read_proper_ts_tree(get_correct_data_path("custom_data/tree_proper.csv"))
 
 app = FastAPI()
 executor = ProcessPoolExecutor()
@@ -23,13 +24,22 @@ class TimeSeriesData(BaseModel):
     queue_id: int
 
 
-tree = read_proper_ts_tree(get_correct_data_path("custom_data/tree_proper.csv"))
-
-
 def get_df_slice(queue_id: int):
     queues = tree[tree["queueId"] == queue_id]["allDescendants"].values[0]
     df_slice = df[df["queueId"].isin(queues)].groupby("date").sum().reset_index()
     return df_slice
+
+
+@app.get("/api/data-status")
+async def get_data_status():
+    return {
+        "has_data": data_checker.check_data_availability(
+            [
+                get_correct_data_path("tickets_daily/tickets_daily.csv"),
+                get_correct_data_path("custom_data/tree_proper.csv"),
+            ]
+        )
+    }
 
 
 @app.get("/api/queues")
