@@ -52,3 +52,19 @@ lint:
 test:
     @echo "Running tests..."
     {{poetry}} run pytest
+
+# Run frontend only
+frontend:
+    poetry run streamlit run tasks_support_system_ai/service/frontend/app.py
+
+# Run backend only
+backend:
+    poetry run uvicorn tasks_support_system_ai.service.backend.main:app --reload --port 8000
+
+# Run streamlit service
+service:
+    #!/bin/bash -eux
+    just backend &
+    just frontend &
+    trap 'kill $(jobs -pr)' EXIT
+    wait
