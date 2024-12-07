@@ -7,11 +7,7 @@
 [Ноутбук с baseline](./notebooks/TS/baseline.ipynb)
 
 ## Basiline для NLP
-
-Выводы Baseline:
-## Baseline для Time Series
-
-## Baseline для NLP
+Выводы:
 - Была проведена разметка данных для возможности обучения классификатора.
 - Данные размечены по 10 классам:
   1. Списания/денежные средства
