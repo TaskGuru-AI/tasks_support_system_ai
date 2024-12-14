@@ -68,3 +68,12 @@ service:
     just frontend &
     trap 'kill $(jobs -pr)' EXIT
     wait
+
+# Pull data from MiniO
+pull-data:
+    poetry run minio-sync pull
+
+
+# Push data to MiniO
+push-data:
+    poetry run minio-sync push
