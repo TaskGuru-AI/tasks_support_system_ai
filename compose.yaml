@@ -23,6 +23,8 @@ services:
 
   minio:
     image: minio/minio:latest
+    networks:
+      - minio_network
     volumes:
       - minio_data:/data
     environment:
@@ -57,3 +59,4 @@ networks:
   app-network:
     driver: bridge
   minio_network:
+    driver: bridge
