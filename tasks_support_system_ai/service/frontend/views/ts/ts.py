@@ -1,3 +1,4 @@
+import time
 import streamlit as st
 import requests
 import plotly.graph_objects as go
@@ -6,6 +7,28 @@ import plotly.graph_objects as go
 API_URL = "http://backend:8000"
 
 st.title("Анализ нагрузки очередей")
+
+
+def wait_for_backend(max_retries=30, delay=1):
+    for i in range(max_retries):
+        try:
+            response = requests.get(f"{API_URL}/api/data-status")
+            if response.status_code == 200:
+                return True
+        except requests.RequestException:
+            pass
+        print(f"Waiting for backend... attempt {i+1}/{max_retries}")
+        time.sleep(delay)
+    return False
+
+
+if not wait_for_backend():
+    st.error("Backend service is not available")
+    st.stop()
+
+
+if "data_available" not in st.session_state:
+    st.session_state.data_available = False
 
 
 # @st.cache_data(ttl=600) # better to cache good result
@@ -17,7 +40,9 @@ def check_data_availability():
         return False
 
 
-if not check_data_availability():
+st.session_state.data_available = check_data_availability()
+
+if not st.session_state.data_available:
     st.warning("⚠️ Данные временно недоступны")
     st.markdown("""
         ## Как получить доступ к данным:
