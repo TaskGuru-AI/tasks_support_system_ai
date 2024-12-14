@@ -55,7 +55,7 @@ test:
 
 # Run frontend only
 frontend:
-    poetry run streamlit run tasks_support_system_ai/service/frontend/app.py
+    poetry run streamlit run tasks_support_system_ai/service/frontend/app.py --server.port 8501
 
 # Run backend only
 backend:
