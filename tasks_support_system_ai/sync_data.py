@@ -17,7 +17,7 @@ client = Minio(
     secret_key=secret_key,
     secure=True,
     # http_client=None,
-    cert_check=False,
+    # cert_check=,
 )
 
 BUCKET_NAME = "tasksai"
