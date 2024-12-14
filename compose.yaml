@@ -47,9 +47,13 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - minio
+    networks:
+      - minio_network
+
 volumes:
   minio_data:
 
 networks:
   app-network:
     driver: bridge
+  minio_network:
