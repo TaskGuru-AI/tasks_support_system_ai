@@ -23,13 +23,15 @@ services:
 
   minio:
     image: minio/minio:latest
-    ports:
-      - "9000:9000"  # API port exposed directly
+    networks:
+      - minio_network
     volumes:
       - minio_data:/data
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+      MINIO_SERVER_URL: "https://data.pyrogn.ru"
+      MINIO_BROWSER_REDIRECT_URL: "https://data.pyrogn.ru/ui/"
     command: server /data --console-address ":9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
@@ -47,9 +49,14 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - minio
+    networks:
+      - minio_network
+
 volumes:
   minio_data:
 
 networks:
   app-network:
+    driver: bridge
+  minio_network:
     driver: bridge
