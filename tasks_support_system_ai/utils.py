@@ -7,7 +7,16 @@ def important_function():
 
 
 def get_correct_data_path(path):
-    return Path(__file__).parents[1] / "data" / path
+    possible_paths: list[Path] = [
+        Path(__file__).parents[1] / "data" / path,
+        Path("/app/data") / path,
+        Path("data") / path,
+    ]
+
+    for p in possible_paths:
+        if p.exists():
+            return p
+    return possible_paths[0]
 
 
 class DataAvailabilityChecker:

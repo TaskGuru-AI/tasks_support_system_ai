@@ -29,45 +29,51 @@ generate_data: ensure-output-dir
 ensure-output-dir:
     mkdir -p {{output_dir}}
 
-# Clean generated files
-clean:
-    @echo "Cleaning generated files..."
-    rm -rf {{output_dir}}/*
-    find . -type d -name "__pycache__" -exec rm -rf {} +
-    find . -type f -name "*.pyc" -delete
-
-# Format code
-format:
-    @echo "Formatting code..."
-    {{poetry}} run black .
-    {{poetry}} run isort .
-
-# Run linters
-lint:
-    @echo "Linting code..."
-    {{poetry}} run flake8
-    {{poetry}} run mypy .
-
-# Run tests
-test:
-    @echo "Running tests..."
-    {{poetry}} run pytest
-
-# Run frontend only
+# Run frontend service
 frontend:
+    docker compose up frontend -d
+
+# Run backend service
+backend:
+    docker compose up backend -d
+
+# Run all services
+service:
+    docker compose up backend frontend -d
+
+# Run all services with rebuild
+service-build:
+    docker compose up backend frontend -d --build
+
+# Stop and remove all containers
+down:
+    docker compose down
+
+# Stop and remove all containers, volumes, and images
+clean:
+    docker compose down -v --rmi all
+
+# Build without running
+build:
+    docker compose build
+
+# Development commands (local, without Docker)
+dev-frontend:
     poetry run streamlit run tasks_support_system_ai/service/frontend/app.py --server.port 8501
 
-# Run backend only
-backend:
+dev-backend:
     poetry run uvicorn tasks_support_system_ai.service.backend.main:app --reload --port 8000
 
-# Run streamlit service
-service:
+dev-service:
     #!/bin/bash -eux
-    just backend &
-    just frontend &
+    just dev-backend &
+    just dev-frontend &
     trap 'kill $(jobs -pr)' EXIT
     wait
+
+# View logs
+logs:
+    docker compose logs -f
 
 # Pull data from MiniO
 pull-data:

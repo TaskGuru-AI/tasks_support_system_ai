@@ -2,12 +2,13 @@ import streamlit as st
 import requests
 import plotly.graph_objects as go
 
-API_URL = "http://localhost:8000"
+
+API_URL = "http://backend:8000"
 
 st.title("Анализ нагрузки очередей")
 
 
-@st.cache_data(ttl=600)
+# @st.cache_data(ttl=600) # better to cache good result
 def check_data_availability():
     try:
         response = requests.get(f"{API_URL}/api/data-status")
@@ -20,10 +21,12 @@ if not check_data_availability():
     st.warning("⚠️ Данные временно недоступны")
     st.markdown("""
         ## Как получить доступ к данным:
-        ### Хороший вариант
-        1. Устновите git lfs, запустите `git lfs install`
-        2. Склонируйте репозиторий
+        ### Предустановка:
+        1. `poetry install`
+        2. установить `just`
 
+        ### Хороший вариант через MiniO
+        1. `just pull-data`
 
         ### Запасной вариант
         1. Убедитесь, что у вас есть доступ к репозиторию с данными https://drive.google.com/drive/folders/14b6lcjdD4IZNkyiVbwLm3H_2K3ZXt2HX?usp=sharing
