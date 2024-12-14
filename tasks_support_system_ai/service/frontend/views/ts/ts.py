@@ -1,4 +1,5 @@
 import time
+from http import HTTPStatus
 
 import plotly.graph_objects as go
 import requests
@@ -13,7 +14,7 @@ def wait_for_backend(max_retries=30, delay=1):
     for i in range(max_retries):
         try:
             response = requests.get(f"{API_URL}/api/data-status")
-            if response.status_code == 200:
+            if response.status_code == HTTPStatus.OK:
                 return True
         except requests.RequestException:
             pass
@@ -87,9 +88,7 @@ if queues:
 
     if selected_queue:
         try:
-            hist_response = requests.get(
-                f"{API_URL}/api/historical/{selected_queue['id']}"
-            )
+            hist_response = requests.get(f"{API_URL}/api/historical/{selected_queue['id']}")
             hist_data = hist_response.json()
 
             fig = go.Figure()
@@ -99,7 +98,7 @@ if queues:
                     x=hist_data["timestamps"],
                     y=hist_data["values"],
                     name="Исторические данные",
-                    line=dict(color="blue"),
+                    line={"color": "blue"},
                 )
             )
 
@@ -119,7 +118,7 @@ if queues:
                             x=pred_data["timestamps"],
                             y=pred_data["values"],
                             name="Прогноз",
-                            line=dict(color="red"),
+                            line={"color": "red"},
                         )
                     )
 
@@ -142,18 +141,14 @@ if queues:
                 if show_prediction and pred_data["values"]:
                     pred_avg = sum(pred_data["values"]) / len(pred_data["values"])
                     change = ((pred_avg - avg_load) / avg_load) * 100
-                    st.metric(
-                        "Predicted Average Load", f"{pred_avg:.1f}", f"{change:+.1f}%"
-                    )
+                    st.metric("Predicted Average Load", f"{pred_avg:.1f}", f"{change:+.1f}%")
 
             st.plotly_chart(fig, use_container_width=True)
 
             if st.button("Download Data"):
                 import pandas as pd
 
-                df = pd.DataFrame(
-                    {"Date": hist_data["timestamps"], "Actual": hist_data["values"]}
-                )
+                df = pd.DataFrame({"Date": hist_data["timestamps"], "Actual": hist_data["values"]})
                 if show_prediction:
                     pred_df = pd.DataFrame(
                         {
