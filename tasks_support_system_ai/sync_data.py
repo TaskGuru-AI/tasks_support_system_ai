@@ -1,14 +1,17 @@
-import click
-from minio import Minio
 import os
-from datetime import datetime
-from dotenv import load_dotenv, find_dotenv
 import traceback
+from datetime import datetime
+
+import click
+from dotenv import find_dotenv, load_dotenv
+from minio import Minio
+
 from minio.commonconfig import CopySource
 
 load_dotenv(find_dotenv())
 
-access_key = os.environ.get("MINIO_ACCESS_KEY")
+access_key = os.environ.get(
+    "MINIO_ACCESS_KEY")
 secret_key = os.environ.get("MINIO_SECRET_KEY")
 
 client = Minio(

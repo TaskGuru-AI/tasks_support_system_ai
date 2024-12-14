@@ -29,6 +29,17 @@ generate_data: ensure-output-dir
 ensure-output-dir:
     mkdir -p {{output_dir}}
 
+# Run linting
+lint:
+    poetry run ruff check --fix
+
+# Format code
+format:
+    poetry run ruff format
+
+# Run code linting and formatting
+full-style: lint format
+
 # Run frontend service
 frontend:
     docker compose up frontend -d

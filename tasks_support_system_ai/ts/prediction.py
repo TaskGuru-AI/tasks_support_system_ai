@@ -4,8 +4,8 @@ from darts.models import (
     LinearRegressionModel,
 )
 
-from tasks_support_system_ai.utils import get_correct_data_path, data_checker
 from tasks_support_system_ai.readers import read_proper_ts_tree, ts_read_daily_tickets
+from tasks_support_system_ai.utils import data_checker, get_correct_data_path
 
 
 def get_df_slice(queue_id: int):

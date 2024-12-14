@@ -1,7 +1,9 @@
-import pandas as pd
 from ast import literal_eval
 from collections import defaultdict, deque
 from itertools import chain
+
+import pandas as pd
+
 from tasks_support_system_ai.utils import data_checker
 
 

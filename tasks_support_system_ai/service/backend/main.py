@@ -1,10 +1,12 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
-from tasks_support_system_ai.ts.prediction import predict_ts
-from tasks_support_system_ai.utils import get_correct_data_path, data_checker
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
 from tasks_support_system_ai.readers import read_proper_ts_tree, ts_read_daily_tickets
+from tasks_support_system_ai.ts.prediction import predict_ts
+from tasks_support_system_ai.utils import data_checker, get_correct_data_path
 
 df = ts_read_daily_tickets(get_correct_data_path("tickets_daily/tickets_daily.csv"))
 tree = read_proper_ts_tree(get_correct_data_path("custom_data/tree_proper.csv"))

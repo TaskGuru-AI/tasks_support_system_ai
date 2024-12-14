@@ -28,6 +28,7 @@ python-dotenv = "^1.0.1"
 pytest = "^8.3.3"
 ipykernel = "^6.29.5"
 ipywidgets = "^8.1.5"
+ruff = "^0.8.3"
 
 [build-system]
 requires = ["poetry-core"]
@@ -35,3 +36,30 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 minio-sync = "tasks_support_system_ai.sync_data:cli"
+
+[tool.ruff]
+extend-exclude = ['*.ipynb']
+line-length = 88
+indent-width = 4
+
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+ignore = []
+
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.format]
+quote-style = "double"
+
+indent-style = "space"
+
+skip-magic-trailing-comma = false
+
+line-ending = "auto"
+
+docstring-code-format = false
+
+docstring-code-line-length = "dynamic"

@@ -1,8 +1,8 @@
 import time
-import streamlit as st
-import requests
-import plotly.graph_objects as go
 
+import plotly.graph_objects as go
+import requests
+import streamlit as st
 
 API_URL = "http://backend:8000"
 
