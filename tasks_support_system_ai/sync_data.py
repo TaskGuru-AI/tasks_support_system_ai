@@ -12,10 +12,10 @@ access_key = os.environ.get("MINIO_ACCESS_KEY")
 secret_key = os.environ.get("MINIO_SECRET_KEY")
 
 client = Minio(
-    "data.pyrogn.ru:9000",
+    "data.pyrogn.ru",
     access_key=access_key,
     secret_key=secret_key,
-    secure=False,
+    secure=True,
     # http_client=None,
     cert_check=False,
 )
