@@ -10,20 +10,19 @@ from minio.commonconfig import CopySource
 
 load_dotenv(find_dotenv())
 
+MINIO_DOMAIN = "data.pyrogn.ru"
+BUCKET_NAME = "tasksai"
+KEEP_N_BACKUPS = 10
+
 access_key = os.environ.get("MINIO_ACCESS_KEY")
 secret_key = os.environ.get("MINIO_SECRET_KEY")
 
 client = Minio(
-    "data.pyrogn.ru",
+    MINIO_DOMAIN,
     access_key=access_key,
     secret_key=secret_key,
     secure=True,
-    # http_client=None,
-    # cert_check=,
 )
-
-BUCKET_NAME = "tasksai"
-KEEP_N_BACKUPS = 5
 
 
 @click.group()

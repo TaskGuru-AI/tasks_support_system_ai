@@ -4,7 +4,7 @@ from itertools import chain
 
 import pandas as pd
 
-from tasks_support_system_ai.utils import data_checker
+from tasks_support_system_ai.utils.utils import data_checker
 
 
 def read_ts_tree(path: str) -> pd.DataFrame:
