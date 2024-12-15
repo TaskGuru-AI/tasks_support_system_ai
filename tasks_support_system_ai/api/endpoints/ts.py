@@ -1,44 +1,16 @@
-import asyncio
 from concurrent.futures import ProcessPoolExecutor
 
-from fastapi import FastAPI, status
-from pydantic import BaseModel
+from fastapi import APIRouter, status
 
-from tasks_support_system_ai.readers import read_proper_ts_tree, ts_read_daily_tickets
-from tasks_support_system_ai.ts.prediction import predict_ts
-from tasks_support_system_ai.utils import data_checker, get_correct_data_path
+from tasks_support_system_ai.api.models.ts import HealthCheck
+from tasks_support_system_ai.utils.utils import data_checker, get_correct_data_path
 
-df = ts_read_daily_tickets(get_correct_data_path("tickets_daily/tickets_daily.csv"))
-tree = read_proper_ts_tree(get_correct_data_path("custom_data/tree_proper.csv"))
+router = APIRouter()
 
-app = FastAPI()
 executor = ProcessPoolExecutor()
 
 
-class ForecastRequest(BaseModel):
-    queue_id: int
-    days_ahead: int
-
-
-class TimeSeriesData(BaseModel):
-    timestamps: list[str]
-    values: list[int]
-    queue_id: int
-
-
-def get_df_slice(queue_id: int):
-    queues = tree[tree["queueId"] == queue_id]["allDescendants"].values[0]
-    df_slice = df[df["queueId"].isin(queues)].groupby("date").sum().reset_index()
-    return df_slice
-
-
-class HealthCheck(BaseModel):
-    """Response model to validate and return when performing a health check."""
-
-    status: str = "OK"
-
-
-@app.get(
+@router.get(
     "/health",
     tags=["healthcheck"],
     summary="Perform a Health Check",
@@ -58,7 +30,7 @@ def get_health() -> HealthCheck:
     return HealthCheck(status="OK")
 
 
-@app.get("/api/data-status")
+@router.get("/api/data-status")
 async def get_data_status():
     return {
         "has_data": data_checker.check_data_availability(
@@ -70,7 +42,7 @@ async def get_data_status():
     }
 
 
-@app.get("/api/queues")
+@router.get("/api/queues")
 async def get_queues():
     # топ 10 очередей
     queue_ids = (

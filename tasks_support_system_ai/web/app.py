@@ -14,8 +14,8 @@ st.set_page_config(
 )
 # st.write('# Система анализа задач службы технической поддержки с авторекомендациями')
 
-ts_page = st.Page("views/ts/ts.py", title="TS", icon=":material/calendar_clock:")
-nlp_page = st.Page("views/nlp/nlp.py", title="NLP", icon=":material/notes:")
+ts_page = st.Page("pages/ts.py", title="TS", icon=":material/calendar_clock:")
+nlp_page = st.Page("pages/nlp.py", title="NLP", icon=":material/notes:")
 
 pg = st.navigation([ts_page, nlp_page])
 

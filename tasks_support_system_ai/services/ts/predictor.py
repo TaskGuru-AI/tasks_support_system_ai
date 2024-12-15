@@ -4,8 +4,8 @@ from darts.models import (
     LinearRegressionModel,
 )
 
-from tasks_support_system_ai.readers import read_proper_ts_tree, ts_read_daily_tickets
-from tasks_support_system_ai.utils import data_checker, get_correct_data_path
+from tasks_support_system_ai.data.readers import read_proper_ts_tree, ts_read_daily_tickets
+from tasks_support_system_ai.utils.utils import data_checker, get_correct_data_path
 
 
 def get_df_slice(queue_id: int):
@@ -43,3 +43,9 @@ def predict_ts(queue_id: int, days_ahead: int) -> TimeSeries:
     forecast = model.predict(days_ahead)
 
     return forecast
+
+
+def get_df_slice(queue_id: int):
+    queues = tree[tree["queueId"] == queue_id]["allDescendants"].values[0]
+    df_slice = df[df["queueId"].isin(queues)].groupby("date").sum().reset_index()
+    return df_slice

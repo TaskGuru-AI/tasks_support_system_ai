@@ -1,6 +1,3 @@
-import time  # noqa
-from http import HTTPStatus  # noqa
-
 import plotly.graph_objects as go
 import requests
 import streamlit as st
@@ -37,7 +34,8 @@ if not st.session_state.data_available:
         1. `just pull-data`
 
         ### Запасной вариант
-        1. Убедитесь, что у вас есть доступ к репозиторию с данными https://drive.google.com/drive/folders/14b6lcjdD4IZNkyiVbwLm3H_2K3ZXt2HX?usp=sharing
+        1. Убедитесь, что у вас есть доступ к репозиторию с данными
+            https://drive.google.com/drive/folders/14b6lcjdD4IZNkyiVbwLm3H_2K3ZXt2HX?usp=sharing
         2. Скачайте данные из папки data
         3. Разместите их в локальном репозитории в папке `./data/`
         4. Установить just и запустите `just generate_data`

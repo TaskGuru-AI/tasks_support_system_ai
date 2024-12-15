@@ -35,7 +35,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-minio-sync = "tasks_support_system_ai.sync_data:cli"
+minio-sync = "tasks_support_system_ai.data.sync_data:cli"
 
 [tool.ruff]
 extend-exclude = ['*.ipynb']

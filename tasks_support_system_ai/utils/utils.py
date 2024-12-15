@@ -1,10 +1,6 @@
 from pathlib import Path
 
 
-def important_function():
-    return "important text"
-
-
 def get_correct_data_path(path) -> Path:
     """Get always correct path of data in ./data folder"""
     possible_paths: list[Path] = [
