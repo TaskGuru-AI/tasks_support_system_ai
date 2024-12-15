@@ -2,7 +2,7 @@ import plotly.graph_objects as go
 import requests
 import streamlit as st
 
-API_URL = "http://backend:8000"
+API_URL = "http://backend:8000/ts"
 
 st.title("Анализ нагрузки очередей")
 
@@ -23,7 +23,7 @@ def check_data_availability():
 st.session_state.data_available = check_data_availability()
 
 if not st.session_state.data_available:
-    st.warning("⚠️ Данные временно недоступны")
+    st.warning("⚠️ Данные недоступны")
     st.markdown("""
         ## Как получить доступ к данным:
         ### Предустановка:

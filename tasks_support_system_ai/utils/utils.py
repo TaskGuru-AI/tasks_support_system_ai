@@ -1,10 +1,11 @@
 from pathlib import Path
 
 
-def get_correct_data_path(path) -> Path:
+def get_correct_data_path(path: str | Path) -> Path:
     """Get always correct path of data in ./data folder"""
     possible_paths: list[Path] = [
-        Path(__file__).parents[1] / "data" / path,
+        # index 2 is hardcode and dependent on position of this file
+        Path(__file__).parents[2] / "data" / path,
         Path("/app/data") / path,
         Path("data") / path,
     ]

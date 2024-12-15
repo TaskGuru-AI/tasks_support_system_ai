@@ -1,8 +1,11 @@
+import asyncio
 from concurrent.futures import ProcessPoolExecutor
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter
 
-from tasks_support_system_ai.api.models.ts import HealthCheck
+from tasks_support_system_ai.api.models.ts import ForecastRequest, TimeSeriesData
+from tasks_support_system_ai.data.reader import DataFrames
+from tasks_support_system_ai.services.ts.predictor import get_df_slice, get_top_queues, predict_ts
 from tasks_support_system_ai.utils.utils import data_checker, get_correct_data_path
 
 router = APIRouter()
@@ -10,33 +13,13 @@ router = APIRouter()
 executor = ProcessPoolExecutor()
 
 
-@router.get(
-    "/health",
-    tags=["healthcheck"],
-    summary="Perform a Health Check",
-    response_description="Return HTTP Status Code 200 (OK)",
-    status_code=status.HTTP_200_OK,
-)
-def get_health() -> HealthCheck:
-    """
-    ## Perform a Health Check
-    Endpoint to perform a healthcheck on. This endpoint can primarily be used Docker
-    to ensure a robust container orchestration and management is in place. Other
-    services which rely on proper functioning of the API service will not deploy if this
-    endpoint returns any other HTTP status code except 200 (OK).
-    Returns:
-        HealthCheck: Returns a JSON response with the health status
-    """
-    return HealthCheck(status="OK")
-
-
 @router.get("/api/data-status")
 async def get_data_status():
     return {
         "has_data": data_checker.check_data_availability(
             [
-                get_correct_data_path("tickets_daily/tickets_daily.csv"),
-                get_correct_data_path("custom_data/tree_proper.csv"),
+                get_correct_data_path(path.value)
+                for path in [DataFrames.TS_HIERARCHY_PARSED, DataFrames.TS_DAILY]
             ]
         )
     }
@@ -45,28 +28,12 @@ async def get_data_status():
 @router.get("/api/queues")
 async def get_queues():
     # топ 10 очередей
-    queue_ids = (
-        tree[(tree["level"] == 1) & (tree["full_load"] != 0)]
-        .sort_values("full_load", ascending=False)["queueId"]
-        .head(10)
-        .values.tolist()
-    )
-
-    return {
-        "queues": [
-            {
-                "id": int(queue_id),
-                "name": f"Queue {queue_id}",
-                "load": int(tree[tree["queueId"] == queue_id]["full_load"].iloc[0]),
-            }
-            for queue_id in queue_ids
-        ]
-    }
+    return get_top_queues()
 
 
-@app.get("/api/historical/{queue_id}")
-async def get_historical(queue_id: int):
-    data_queue = get_df_slice(queue_id)
+@router.get("/api/historical/{queue_id}")
+async def get_historical(queue_id: int) -> TimeSeriesData:
+    data_queue = get_df_slice(queue_id).reset_index()
     timestamps = data_queue["date"].dt.strftime("%Y-%m-%d").tolist()
 
     return TimeSeriesData(
@@ -76,7 +43,7 @@ async def get_historical(queue_id: int):
     )
 
 
-@app.post("/api/forecast")
+@router.post("/api/forecast")
 async def forecast(request: ForecastRequest):
     loop = asyncio.get_event_loop()
     forecast_ts = await loop.run_in_executor(
