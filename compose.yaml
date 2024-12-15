@@ -8,6 +8,13 @@ services:
       - ./data:/app/data
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 1s
+
 
   frontend:
     build: .
@@ -19,7 +26,8 @@ services:
     networks:
       - app-network
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
   minio:
     image: minio/minio:latest

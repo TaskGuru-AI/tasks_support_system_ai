@@ -1,5 +1,5 @@
-import time
-from http import HTTPStatus
+import time  # noqa
+from http import HTTPStatus  # noqa
 
 import plotly.graph_objects as go
 import requests
@@ -8,24 +8,6 @@ import streamlit as st
 API_URL = "http://backend:8000"
 
 st.title("Анализ нагрузки очередей")
-
-
-def wait_for_backend(max_retries=30, delay=1):
-    for i in range(max_retries):
-        try:
-            response = requests.get(f"{API_URL}/api/data-status")
-            if response.status_code == HTTPStatus.OK:
-                return True
-        except requests.RequestException:
-            pass
-        print(f"Waiting for backend... attempt {i+1}/{max_retries}")
-        time.sleep(delay)
-    return False
-
-
-if not wait_for_backend():
-    st.error("Backend service is not available")
-    st.stop()
 
 
 if "data_available" not in st.session_state:
