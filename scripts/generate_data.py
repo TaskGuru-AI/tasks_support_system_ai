@@ -1,10 +1,11 @@
-from tasks_support_system_ai.utils import get_correct_data_path
+from pathlib import Path
+
 from tasks_support_system_ai.readers import (
+    get_proper_tree,
     read_ts_tree,
     ts_read_daily_tickets,
-    get_proper_tree,
 )
-from pathlib import Path
+from tasks_support_system_ai.utils import get_correct_data_path
 
 DATA_FOLDER = "custom_data"
 (Path("data") / DATA_FOLDER).mkdir(parents=True, exist_ok=True)

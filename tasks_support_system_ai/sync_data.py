@@ -1,9 +1,11 @@
-import click
-from minio import Minio
 import os
-from datetime import datetime
-from dotenv import load_dotenv, find_dotenv
 import traceback
+from datetime import datetime
+from pathlib import Path
+
+import click
+from dotenv import find_dotenv, load_dotenv
+from minio import Minio
 from minio.commonconfig import CopySource
 
 load_dotenv(find_dotenv())
@@ -34,19 +36,19 @@ def cli():
 def pull():
     """Pull all data from MinIO to local ./data folder"""
     try:
-        os.makedirs("data", exist_ok=True)
+        Path.mkdir(Path("data"), exist_ok=True, parents=True)
 
         objects = client.list_objects(BUCKET_NAME, recursive=True)
         for obj in objects:
-            local_path = os.path.join("data", obj.object_name)
-            os.makedirs(os.path.dirname(local_path), exist_ok=True)
+            local_path = Path("data") / obj.object_name
+            Path.mkdir(Path(local_path).parent, exist_ok=True, parents=True)
             client.fget_object(BUCKET_NAME, obj.object_name, local_path)
             click.echo(f"Downloaded: {obj.object_name}")
 
         click.echo("Pull completed successfully")
 
     except Exception as e:
-        click.echo(f"Error: {e}", err=True)
+        click.echo(f"Error: {e} {traceback.format_exc()}", err=True)
 
 
 @cli.command()
@@ -85,7 +87,7 @@ def push():
 
         for root, _, files in os.walk("data"):
             for file in files:
-                local_path = os.path.join(root, file)
+                local_path = Path(root) / file
                 object_name = os.path.relpath(local_path, "data")
                 client.fput_object(BUCKET_NAME, object_name, local_path)
                 click.echo(f"Uploaded: {object_name}")

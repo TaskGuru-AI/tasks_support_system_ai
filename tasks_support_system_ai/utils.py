@@ -1,5 +1,4 @@
 from pathlib import Path
-import os
 
 
 def important_function():
@@ -28,7 +27,7 @@ class DataAvailabilityChecker:
         if self._has_data is not None:
             return self._has_data
 
-        self._has_data = all(os.path.exists(path) for path in file_paths)
+        self._has_data = all(Path.exists(path) for path in file_paths)
         return self._has_data
 
 
