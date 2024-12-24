@@ -1,18 +1,65 @@
+import datetime
+from enum import Enum
+
 from pydantic import BaseModel
+
+
+class TimeGranularity(str, Enum):
+    HOURLY = "hourly"
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+    QUARTERLY = "quarterly"
+    YEARLY = "yearly"
+
+
+class QueueStructure(BaseModel):
+    queue_id: int
+    queue_level: int
+    immediate_ancestors: list[int]
+    all_ancestors: list[int]
+
+
+class QueueLoad(BaseModel):
+    queue_id: int
+    timestamp: datetime
+    ticket_count: int
+
+
+class QueueStats(BaseModel):
+    queue_id: int
+    start_date: datetime
+    end_date: datetime
+    granularity: TimeGranularity
+    total_tickets: int
+    avg_daily_tickets: float
+    peak_load: int
+    min_load: int
+
+
+class TimeSeriesData(BaseModel):
+    queue_id: int
+    data: dict[datetime.date, int]
+    granularity: TimeGranularity = TimeGranularity.DAILY
 
 
 class ForecastRequest(BaseModel):
     queue_id: int
-    days_ahead: int
+    forecast_horizon: int
+    granularity: TimeGranularity
+    include_confidence_intervals: bool = False
 
 
-class TimeSeriesData(BaseModel):
-    timestamps: list[str]
-    values: list[int]
+class ForecastResult(BaseModel):
     queue_id: int
+    forecast_values: list[float]
+    timestamps: list[datetime.date]
+    confidence_intervals: list[dict[str, float]] | None = None
 
 
-class HealthCheck(BaseModel):
-    """Response model to validate and return when performing a health check."""
-
-    status: str = "OK"
+class QueueComparison(BaseModel):
+    queue_ids: list[str]
+    start_date: datetime
+    end_date: datetime
+    granularity: TimeGranularity
+    metrics: dict[str, dict[str, float]]

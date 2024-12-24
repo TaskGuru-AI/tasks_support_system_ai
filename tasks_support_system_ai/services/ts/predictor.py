@@ -1,72 +1,89 @@
+from datetime import datetime
+
 import pandas as pd
 from darts import TimeSeries
 from darts.models import (
     LinearRegressionModel,
 )
 
-from tasks_support_system_ai.data.reader import DataFrames, read_data
-from tasks_support_system_ai.utils.utils import data_checker, get_correct_data_path
+from tasks_support_system_ai.api.models.ts import QueueStats, TimeGranularity
+from tasks_support_system_ai.data.reader import DataService
 
 
-def get_df_slice(queue_id: int):
-    queues = tree[tree["queueId"] == queue_id]["allDescendants"].values[0]
-    df_slice = df[df["queueId"].isin(queues)].groupby("date")[["new_tickets"]].sum()
-    return df_slice
+class TSPredictor:
+    def __init__(self, data_service: DataService):
+        self.data_service = data_service
 
+    def get_df_slice(self, queue_id: int) -> pd.DataFrame:
+        tree = self.data_service.hierarchy_df
+        df = self.data_service.tickets_df
+        queues = tree[tree["queueId"] == queue_id]["allDescendants"].values[0]
+        df_slice = df[df["queueId"].isin(queues)].groupby("date")[["new_tickets"]].sum()
+        return df_slice
 
-if data_checker.check_data_availability(
-    [
-        get_correct_data_path("tickets_daily/tickets_daily.csv"),
-        get_correct_data_path("custom_data/tree_proper.csv"),
-    ]
-):
-    tree = read_data(DataFrames.TS_HIERARCHY_PARSED)
-    df = read_data(DataFrames.TS_DAILY)
-else:
-    tree = pd.DataFrame()
-    df = pd.DataFrame()
+    def predict_ts(self, queue_id: int, days_ahead: int) -> TimeSeries:
+        data = self.get_df_slice(queue_id)
+        ts = TimeSeries.from_dataframe(
+            data,
+            value_cols="new_tickets",
+            fill_missing_dates=True,
+            fillna_value=0,
+            freq="D",
+        )
 
+        model = LinearRegressionModel(lags=10)
+        model.fit(ts)
 
-def predict_ts(queue_id: int, days_ahead: int) -> TimeSeries:
-    data = get_df_slice(queue_id)
-    ts = TimeSeries.from_dataframe(
-        data,
-        value_cols="new_tickets",
-        fill_missing_dates=True,
-        fillna_value=0,
-        freq="D",
-    )
+        forecast = model.predict(days_ahead)
 
-    model = LinearRegressionModel(lags=10)
-    model.fit(ts)
+        return forecast
 
-    forecast = model.predict(days_ahead)
+    def get_top_queues(self, top_n=10) -> dict:
+        tree = self.data_service.hierarchy_df
+        queue_ids = (
+            tree[
+                (tree["level"] == 1) & (tree["full_load"] != 0)
+            ]  # full_load - заплатка, инфа из ts_daily
+            .sort_values("full_load", ascending=False)["queueId"]
+            .head(top_n)
+            .values.tolist()
+        )
+        return {
+            "queues": [
+                {
+                    "id": int(queue_id),
+                    "name": f"Queue {queue_id}",
+                    "load": int(tree[tree["queueId"] == queue_id]["full_load"].iloc[0]),
+                }
+                for queue_id in queue_ids
+            ]
+        }
 
-    return forecast
+    def get_queue_stats(
+        self, queue_id: int, start_date: datetime, end_date: datetime, granularity: TimeGranularity
+    ) -> QueueStats:
+        queue_ids = self.data_service.get_descendants(queue_id)
+        tickets_df = self.data_service.tickets_df
 
-
-def get_top_queues(top_n=10) -> dict:
-    queue_ids = (
-        tree[
-            (tree["level"] == 1) & (tree["full_load"] != 0)
-        ]  # full_load - заплатка, инфа из ts_daily
-        .sort_values("full_load", ascending=False)["queueId"]
-        .head(top_n)
-        .values.tolist()
-    )
-    return {
-        "queues": [
-            {
-                "id": int(queue_id),
-                "name": f"Queue {queue_id}",
-                "load": int(tree[tree["queueId"] == queue_id]["full_load"].iloc[0]),
-            }
-            for queue_id in queue_ids
+        df_slice = tickets_df[
+            (tickets_df["queueId"].isin(queue_ids))
+            & (tickets_df["date"] >= start_date)
+            & (tickets_df["date"] <= end_date)
         ]
-    }
 
+        grouped_data = self.data_service.aggregate_data(df_slice, granularity)
 
-# def get_df_slice(queue_id: int):
-#     queues = tree[tree["queueId"] == queue_id]["allDescendants"].values[0]
-#     df_slice = df[df["queueId"].isin(queues)].groupby("date").sum().reset_index()
-#     return df_slice
+        immediate_ancestors, all_ancestors = self.data_service.get_ancestors(queue_id)
+
+        return QueueStats(
+            queue_id=queue_id,
+            start_date=start_date,
+            end_date=end_date,
+            granularity=granularity,
+            total_tickets=int(grouped_data["new_tickets"]["sum"]),
+            avg_tickets=float(grouped_data["new_tickets"]["mean"]),
+            peak_load=int(grouped_data["new_tickets"]["max"]),
+            min_load=int(grouped_data["new_tickets"]["min"]),
+            immediate_ancestors=immediate_ancestors,
+            all_ancestors=all_ancestors,
+        )
