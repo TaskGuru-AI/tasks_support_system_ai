@@ -13,7 +13,7 @@ from tasks_support_system_ai.api.models.ts import (
     TimeGranularity,
     TimeSeriesData,
 )
-from tasks_support_system_ai.data.reader import DataFrames, DataService
+from tasks_support_system_ai.data.reader import DataFrames, TSDataManager
 from tasks_support_system_ai.services.ts.predictor import (
     TSPredictor,
 )
@@ -22,7 +22,7 @@ from tasks_support_system_ai.utils.utils import get_correct_data_path
 router = APIRouter()
 
 executor = ProcessPoolExecutor()
-data_service = DataService()
+data_service = TSDataManager()
 # make it resilient, do not fail if there is no data locally
 # remove duplication
 data_service.load_data(

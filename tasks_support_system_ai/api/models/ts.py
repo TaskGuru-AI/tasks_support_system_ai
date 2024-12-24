@@ -16,8 +16,8 @@ class TimeGranularity(str, Enum):
 class QueueStructure(BaseModel):
     queue_id: int
     queue_level: int
-    immediate_ancestors: list[int]
-    all_ancestors: list[int]
+    immediate_descendants: list[int]
+    all_descentants: list[int]
 
 
 class QueueLoad(BaseModel):
