@@ -1,4 +1,4 @@
-import datetime
+from datetime import date, datetime
 from enum import Enum
 
 from pydantic import BaseModel
@@ -39,7 +39,7 @@ class QueueStats(BaseModel):
 
 class TimeSeriesData(BaseModel):
     queue_id: int
-    data: dict[datetime.date, int]
+    data: dict[date, int]
     granularity: TimeGranularity = TimeGranularity.DAILY
 
 
@@ -53,7 +53,7 @@ class ForecastRequest(BaseModel):
 class ForecastResult(BaseModel):
     queue_id: int
     forecast_values: list[float]
-    timestamps: list[datetime.date]
+    timestamps: list[date]
     confidence_intervals: list[dict[str, float]] | None = None
 
 
