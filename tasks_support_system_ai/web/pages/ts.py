@@ -40,6 +40,8 @@ if not st.session_state.data_available:
         3. Разместите их в локальном репозитории в папке `./data/`
         4. Установить just и запустите `just generate_data`
     """)
+    # TODO: add buttons to upload data (should be reused)
+    # add option to download data from miniO
     st.stop()
 
 
@@ -65,9 +67,17 @@ if queues:
     st.sidebar.markdown("### Настройки прогноза")
     days_ahead = st.sidebar.slider("Дней вперед", 1, 300, 25)
     show_prediction = st.sidebar.checkbox("Показать прогноз", value=True)
+    # add parameters:
+    # date start, date end
+    # ts granularity
 
     if selected_queue:
         try:
+            # EDA PART
+            # make plot
+            # make table with hierarchy stats
+            # make table with time series stats
+
             hist_response = requests.get(f"{API_URL}/api/historical/{selected_queue['id']}")
             hist_data = hist_response.json()
 
@@ -109,7 +119,10 @@ if queues:
                 hovermode="x unified",
             )
 
-            # Display metrics
+            # ML part
+            # TODO: add models to choose, some parameters and hyperparameters
+            # models could be reused
+            # Display metrics (TODO: add more metrics)
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.metric("Total Load", f"{selected_queue['load']:,}")
@@ -124,27 +137,6 @@ if queues:
                     st.metric("Predicted Average Load", f"{pred_avg:.1f}", f"{change:+.1f}%")
 
             st.plotly_chart(fig, use_container_width=True)
-
-            if st.button("Download Data"):
-                import pandas as pd
-
-                df = pd.DataFrame({"Date": hist_data["timestamps"], "Actual": hist_data["values"]})
-                if show_prediction:
-                    pred_df = pd.DataFrame(
-                        {
-                            "Date": pred_data["timestamps"],
-                            "Predicted": pred_data["values"],
-                        }
-                    )
-                    df = pd.concat([df, pred_df], axis=0)
-
-                st.download_button(
-                    "Download CSV",
-                    df.to_csv(index=False).encode("utf-8"),
-                    f"queue_{selected_queue['id']}_data.csv",
-                    "text/csv",
-                    key="download-csv",
-                )
 
         except requests.exceptions.RequestException as e:
             st.error(f"Error fetching data: {str(e)}")

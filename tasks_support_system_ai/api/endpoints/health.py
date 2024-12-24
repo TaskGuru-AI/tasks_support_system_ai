@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status
 
-from tasks_support_system_ai.api.models.ts import HealthCheck
+from tasks_support_system_ai.api.models.common import HealthCheck
 
 router = APIRouter()
 
