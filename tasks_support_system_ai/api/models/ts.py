@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from enum import Enum
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -63,3 +64,13 @@ class QueueComparison(BaseModel):
     end_date: datetime
     granularity: TimeGranularity
     metrics: dict[str, dict[str, float]]
+
+
+class ModelInfo(BaseModel):
+    id: str
+
+
+class ModelConfig(BaseModel):
+    id: str
+    ml_model_type: Literal["linear", "logistic"]
+    hyperparameters: dict[str, Any]
