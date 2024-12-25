@@ -39,7 +39,7 @@ def validate_training_data(X: list[list[float]], y: list[float]) -> tuple[bool, 
         X_array = np.array(X)
         y_array = np.array(y)
 
-        if len(X_array.shape) != 2:
+        if len(X_array.shape) != 2:  # noqa: PLR2004
             return False, "X must be 2-dimensional"
 
         if len(X_array) != len(y_array):
