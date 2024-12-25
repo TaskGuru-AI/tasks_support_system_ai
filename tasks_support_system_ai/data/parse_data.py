@@ -4,12 +4,8 @@ from itertools import chain
 
 import pandas as pd
 
-from tasks_support_system_ai.utils.utils import data_checker
 
-
-def read_ts_tree(path: str) -> pd.DataFrame:
-    if not data_checker.check_data_availability([path]):
-        return pd.DataFrame()
+def read_ts_tree(path) -> pd.DataFrame:
     tree = pd.read_csv(
         path,
         sep="\t",
@@ -32,9 +28,7 @@ def read_ts_tree(path: str) -> pd.DataFrame:
     return tree
 
 
-def read_proper_ts_tree(path: str) -> pd.DataFrame:
-    if not data_checker.check_data_availability([path]):
-        return pd.DataFrame()
+def read_proper_ts_tree(path) -> pd.DataFrame:
     tree = pd.read_csv(
         path,
         converters={
@@ -225,9 +219,7 @@ def has_cycle(graph):
     return any(node not in visited and dfs(node) for node in graph)
 
 
-def ts_read_daily_tickets(path: str) -> pd.DataFrame:
-    if not data_checker.check_data_availability([path]):
-        return pd.DataFrame()
+def ts_read_daily_tickets(path) -> pd.DataFrame:
     df = pd.read_csv(path, sep=";")
     df["date"] = pd.to_datetime(df["date"], format="%d.%m.%Y")
     return df
