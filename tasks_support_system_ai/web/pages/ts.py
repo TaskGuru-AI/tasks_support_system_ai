@@ -7,7 +7,7 @@ import streamlit as st
 
 from tasks_support_system_ai.api.models.ts import ForecastRequest
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 api_url = "http://backend:8000/ts"
 
