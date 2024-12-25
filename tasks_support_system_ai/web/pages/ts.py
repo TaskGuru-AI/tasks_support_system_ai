@@ -1,11 +1,20 @@
+import logging
+import os
+
 import plotly.graph_objects as go
 import requests
 import streamlit as st
 
-API_URL = "http://backend:8000/ts"
+from tasks_support_system_ai.api.models.ts import ForecastRequest
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+api_url = "http://backend:8000/ts"
 
 st.title("Анализ нагрузки очередей")
 
+if os.getenv("IS_DOCKER", "0") == "0":
+    api_url = "http://localhost:8000/ts"
 
 if "data_available" not in st.session_state:
     st.session_state.data_available = False
@@ -14,7 +23,7 @@ if "data_available" not in st.session_state:
 # @st.cache_data(ttl=600) # better to cache good result
 def check_data_availability():
     try:
-        response = requests.get(f"{API_URL}/api/data-status")
+        response = requests.get(f"{api_url}/api/data-status")
         return response.json()["has_data"]
     except requests.exceptions.RequestException:
         return False
@@ -48,7 +57,7 @@ if not st.session_state.data_available:
 @st.cache_data(ttl=600)
 def fetch_queues():
     try:
-        response = requests.get(f"{API_URL}/api/queues")
+        response = requests.get(f"{api_url}/api/queues")
         return response.json()["queues"]
     except requests.exceptions.RequestException as e:
         st.error(f"Error fetching queues: {str(e)}")
@@ -78,7 +87,7 @@ if queues:
             # make table with hierarchy stats
             # make table with time series stats
 
-            hist_response = requests.get(f"{API_URL}/api/historical/{selected_queue['id']}")
+            hist_response = requests.get(f"{api_url}/api/historical/{selected_queue['id']}")
             hist_data = hist_response.json()
 
             fig = go.Figure()
@@ -95,13 +104,13 @@ if queues:
             if show_prediction:
                 with st.spinner("Генерация прогноза..."):
                     pred_response = requests.post(
-                        f"{API_URL}/api/forecast",
-                        json={
-                            "queue_id": selected_queue["id"],
-                            "days_ahead": days_ahead,
-                        },
+                        f"{api_url}/api/forecast",
+                        json=ForecastRequest(
+                            queue_id=selected_queue["id"],
+                            forecast_horizon=days_ahead,
+                        ).model_dump(),
                     )
-                    pred_data = pred_response.json()["forecast"]
+                    pred_data = pred_response.json()
 
                     fig.add_trace(
                         go.Scatter(

@@ -13,11 +13,15 @@ from tasks_support_system_ai.api.models.ts import (
     TimeGranularity,
     TimeSeriesData,
 )
-from tasks_support_system_ai.data.reader import DataFrames, TSDataManager
+from tasks_support_system_ai.data.reader import (
+    TSDataIntersection,
+    TSDataManager,
+    TSHierarchyData,
+    TSTicketsData,
+)
 from tasks_support_system_ai.services.ts.predictor import (
     TSPredictor,
 )
-from tasks_support_system_ai.utils.utils import get_correct_data_path
 
 router = APIRouter()
 
@@ -25,32 +29,27 @@ executor = ProcessPoolExecutor()
 data_service = TSDataManager()
 # make it resilient, do not fail if there is no data locally
 # remove duplication
-data_service.load_data(
-    hierarchy_path=get_correct_data_path(DataFrames.TS_HIERARCHY_PARSED.value),
-    tickets_path=get_correct_data_path(DataFrames.TS_DAILY.value),
-)
-ts_predictor = TSPredictor(data_service)
+data_service.load_data()
+tickets_data = TSTicketsData(data_service)
+hierarchy_data = TSHierarchyData(data_service)
+all_data = TSDataIntersection(tickets_data, hierarchy_data)
+ts_predictor = TSPredictor(all_data)
 
 
 @router.get("/api/data-status")
 async def get_data_status():
-    return {
-        "has_data": data_service.is_data_local(
-            tickets_path=get_correct_data_path(DataFrames.TS_DAILY.value),
-            hierarchy_path=get_correct_data_path(DataFrames.TS_HIERARCHY_PARSED.value),
-        )
-    }
+    return {"has_data": data_service.is_data_local()}
 
 
 @router.get("/api/queues")
 async def get_queues():
     # топ 10 очередей
-    return ts_predictor.get_top_queues()
+    return all_data.get_top_queues()
 
 
 @router.get("/api/historical/{queue_id}")
 async def get_historical_ts(queue_id: int) -> TimeSeriesData:
-    data_queue = ts_predictor.get_df_slice(queue_id).reset_index()
+    data_queue = all_data.get_df_slice(queue_id).reset_index()
     timestamps = data_queue["date"].dt.strftime("%Y-%m-%d").tolist()
 
     return TimeSeriesData(
@@ -84,12 +83,14 @@ async def forecast(request: ForecastRequest) -> TimeSeriesData:
     )
     return TimeSeriesData(
         queue_id=request.queue_id,
-        data=dict(
-            zip(
-                forecast_ts.time_index.strftime("%Y-%m-%d").tolist(),
-                forecast_ts.values().flatten().tolist(),
-            )
-        ),
+        timestamps=forecast_ts.time_index.strftime("%Y-%m-%d").tolist(),
+        values=forecast_ts.values().flatten().tolist(),
+        # data=dict(
+        #     zip(
+        #         forecast_ts.time_index.strftime("%Y-%m-%d").tolist(),
+        #         forecast_ts.values().flatten().tolist(),
+        #     )
+        # ),
     )
 
 

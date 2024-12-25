@@ -22,6 +22,7 @@ class TSPredictor:
 
     def predict_ts(self, queue_id: int, days_ahead: int) -> TimeSeries:
         data = self.data_service.get_tickets_load_filter(queue_id=queue_id)
+        data = data.set_index("date")
         ts = DataConversion.pandas_to_darts(data)
 
         model = LinearRegressionModel(lags=10)

@@ -23,6 +23,8 @@ services:
       - "8501:8501"
     volumes:
       - ./data:/app/data
+    environment:
+      IS_DOCKER: 1
     networks:
       - app-network
     depends_on:

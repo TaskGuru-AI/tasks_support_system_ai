@@ -1,3 +1,4 @@
+import logging
 from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
@@ -9,6 +10,9 @@ from tasks_support_system_ai.api.models.ts import QueueStats, QueueStructure, Ti
 from tasks_support_system_ai.core.exceptions import DataNotFoundError
 from tasks_support_system_ai.data.parse_data import read_proper_ts_tree, ts_read_daily_tickets
 from tasks_support_system_ai.utils.utils import get_correct_data_path
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 class DataFrames(Enum):
@@ -45,7 +49,7 @@ class TSDataManager:
 
     def is_data_local(self) -> bool:
         for df in (DataFrames.TS_HIERARCHY_PARSED, DataFrames.TS_DAILY):
-            if not Path.exists(df.value):
+            if not Path(get_correct_data_path(df.value)).exists():
                 return False
         return True
 
@@ -121,11 +125,12 @@ class TSDataIntersection:
         date_end: date = date(2022, 1, 1),
     ) -> pd.DataFrame:
         """Фильтрация. 0 - это все тикеты."""
+
         if queue_id != 0:
             df = self.get_df_slice(queue_id)
         else:
-            df = self.tickets.df.groupby("date")[["new_tickets"]].sum()
-        df = df[df["date"].between(date_start, date_end)]
+            df = self.tickets.df.groupby("date")[["new_tickets"]].sum().reset_index()
+        df = df[df["date"].between(str(date_start), str(date_end))]
         return df
 
     def get_top_queues(self, top_n=10) -> dict:
@@ -153,7 +158,9 @@ class TSDataIntersection:
         tree = self.hierarchy.df
         df = self.tickets.df
         queues = tree[tree["queueId"] == queue_id]["allDescendants"].values[0]
-        df_slice = df[df["queueId"].isin(queues)].groupby("date")[["new_tickets"]].sum()
+        df_slice = (
+            df[df["queueId"].isin(queues)].groupby("date")[["new_tickets"]].sum().reset_index()
+        )
         return df_slice
 
     def get_queue_stats(

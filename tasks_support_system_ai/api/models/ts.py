@@ -40,14 +40,17 @@ class QueueStats(BaseModel):
 
 class TimeSeriesData(BaseModel):
     queue_id: int
-    data: dict[date, int]
+    values: list[float]
+    timestamps: list[date]
+    # better to use dict and
+    # data: dict[date, int]
     granularity: TimeGranularity = TimeGranularity.DAILY
 
 
 class ForecastRequest(BaseModel):
     queue_id: int
     forecast_horizon: int
-    granularity: TimeGranularity
+    granularity: TimeGranularity = TimeGranularity.DAILY
     include_confidence_intervals: bool = False
 
 
