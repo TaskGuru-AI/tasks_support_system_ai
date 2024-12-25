@@ -101,19 +101,28 @@ async def upload_data(
 ):
     """Upload new data files"""
     try:
-        tickets_df = pd.read_csv(hierarchy_file.file)
-        hierarchy_df = pd.read_csv(
-            tickets_file.file,
-            converters={
-                "immediateDescendants": literal_eval,
-                "allDescendants": literal_eval,
-            },
-        )
+        # tickets_df = pd.read_csv(hierarchy_file.file)
+        # hierarchy_df = pd.read_csv(
+        #     tickets_file.file,
+        #     converters={
+        #         "immediateDescendants": literal_eval,
+        #         "allDescendants": literal_eval,
+        #     },
+        # )
         tickets_df = pd.read_csv(tickets_file.file, sep=";")
-        tickets_df["date"] = pd.to_datetime(tickets_df["date"], format="%d.%m.%Y")
+        
+        # Печатаем названия столбцов для отладки
+        print("Columns in the file:", tickets_df.columns)
 
-        data_service.update_data(tickets_df, hierarchy_df)
+        # Преобразуем колонку `date` в формат datetime
+        tickets_df["date"] = pd.to_datetime(tickets_df["date"], format="%d.%m.%Y")
+        
+        # Логика обработки данных (например, сохранение или обновление)
+        # data_service.update_data(tickets_df)
+        print(tickets_df.head())  # Для проверки вывода данных
 
         return {"message": "Data updated successfully"}
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"Missing expected column: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

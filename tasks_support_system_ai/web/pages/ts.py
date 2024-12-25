@@ -54,6 +54,12 @@ if not st.session_state.data_available:
     st.stop()
 
 
+st.write("Please upload your CSV file below.")
+
+data = st.file_uploader("Upload a CSV")
+
+
+
 @st.cache_data(ttl=600)
 def fetch_queues():
     try:
