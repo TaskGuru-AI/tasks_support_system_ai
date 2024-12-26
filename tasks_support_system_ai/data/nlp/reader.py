@@ -47,9 +47,11 @@ class NLPDataManager:
                 return False
         return True
 
+
 class NLPTicketsData:
     def __init__(self, data_manager: NLPDataManager):
         self.data_manager = data_manager
+
     def get_train_data(self):
         return self.data_manager.dataframes["train"]
 

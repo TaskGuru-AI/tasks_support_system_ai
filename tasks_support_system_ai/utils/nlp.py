@@ -1,7 +1,9 @@
 import asyncio
 import pickle
 from pathlib import Path
+
 import numpy as np
+
 
 def save(model, file_path: str):
     with Path(file_path).open("wb") as f:
@@ -32,6 +34,6 @@ async def delete_model(file_path: str):
 
 
 def vector_transform(data) -> np.ndarray:
-    data = data.apply(lambda x: x.replace('\n', ' ').strip()[1:-1])
-    data = data.apply(lambda x: np.fromstring(x, sep=' '))
+    data = data.apply(lambda x: x.replace("\n", " ").strip()[1:-1])
+    data = data.apply(lambda x: np.fromstring(x, sep=" "))
     return data.to_list()
