@@ -70,10 +70,10 @@ build:
 
 # Development commands (local, without Docker)
 dev-frontend:
-    poetry run streamlit run tasks_support_system_ai/service/frontend/app.py --server.port 8501
+    poetry run streamlit run tasks_support_system_ai/web/app.py --server.port 8501
 
 dev-backend:
-    poetry run uvicorn tasks_support_system_ai.service.backend.main:app --reload --port 8000
+    poetry run uvicorn tasks_support_system_ai.main:app --reload --port 8000
 
 dev-service:
     #!/bin/bash -eux
