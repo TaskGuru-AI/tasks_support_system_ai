@@ -12,6 +12,8 @@ class DataFrames(Enum):
     TS_HIERARCHY_SOURCE = "dataset_tickets_timeseries/tree_queue.tsv"
     TS_HIERARCHY_PARSED = "custom_data/tree_proper.csv"
     TS_DAILY = "tickets_daily/tickets_daily.csv"
+    NLP_TICKETS_TRAIN = "data/nlp_tickets_train.csv"
+    NLP_TICKETS_TEST = "data/nlp_tickets_test.csv"
 
 
 def read_data(data: DataFrames) -> pd.DataFrame:
@@ -26,5 +28,7 @@ def read_data(data: DataFrames) -> pd.DataFrame:
             return read_proper_ts_tree(data_path)
         case DataFrames.TS_DAILY:
             return ts_read_daily_tickets(data_path)
+        case DataFrames.NLP_TICKETS:
+            return pd.read_csv(data_path)
         case _:
             raise DataNotFoundError(f"No data at path: {data}")
