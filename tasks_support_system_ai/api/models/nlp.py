@@ -1,25 +1,27 @@
+from typing import Literal
+
 from pydantic import BaseModel
-from typing import Union, Dict, Literal, Optional
 
 
 class LogisticConfig(BaseModel):
     C: float = 1.0
-    solver: str = 'lbfgs'
+    solver: str = "lbfgs"
 
 
 class SVMConfig(BaseModel):
     C: float = 1.0
-    kernel: str = 'linear'
-    class_weight: Optional[Union[str, Dict[int, float]]] = None
+    kernel: str = "linear"
+    class_weight: str | dict[int, float] | None = None
 
 
 class FitRequest(BaseModel):
-    model: Literal['logistic', 'svm']
-    config: Union[LogisticConfig, SVMConfig]
+    model: Literal["logistic", "svm"]
+    config: LogisticConfig | SVMConfig
 
 
 class ModelResponse(BaseModel):
     """
     Уникальный ID сгенерированной модели
     """
+
     id: str

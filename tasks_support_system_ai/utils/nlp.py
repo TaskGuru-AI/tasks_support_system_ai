@@ -1,21 +1,22 @@
-import pickle
 import asyncio
-import os
+import pickle
+from pathlib import Path
+
 
 def save(model, file_path: str):
-    with open(file_path, "wb") as f:
+    with Path(file_path).open("wb") as f:
         pickle.dump(model, f)
 
 
 def delete(file_path: str):
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    if Path.exists(file_path):
+        Path.remove(file_path)
     else:
         raise FileNotFoundError("Model not found")
 
 
 def load_file(file_path: str):
-    return pickle.load(open(file_path, "rb"))
+    return pickle.load(Path(file_path).open("rb"))
 
 
 async def save_model(model, file_path: str):
