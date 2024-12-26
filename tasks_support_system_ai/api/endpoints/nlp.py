@@ -4,14 +4,15 @@ from concurrent.futures import ProcessPoolExecutor
 from fastapi import APIRouter
 
 from tasks_support_system_ai.api.models.nlp import FitRequest
-from tasks_support_system_ai.data.nlp.reader import NLPDataManager
+from tasks_support_system_ai.data.nlp.reader import NLPDataManager, NLPTicketsData
 from tasks_support_system_ai.services.nlp.predictor import NLPPredictor
 
 router = APIRouter()
 executor = ProcessPoolExecutor()
 data_service = NLPDataManager()
-data = data_service.load_data()
-nlp_predictor = NLPPredictor(data)
+data_service.load_data()
+nlp_tickets_data = NLPTicketsData(data_service)
+nlp_predictor = NLPPredictor(nlp_tickets_data)
 
 
 @router.post("/api/fit_nlp")

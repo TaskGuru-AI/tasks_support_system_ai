@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 class DataFrames(Enum):
-    NLP_TICKETS_TRAIN = "data/nlp_tickets_train.csv"
-    NLP_TICKETS_TEST = "data/nlp_tickets_test.csv"
+    NLP_TICKETS_TRAIN = "./nlp/nlp_tickets_train.csv"
+    NLP_TICKETS_TEST = "./nlp/nlp_tickets_test.csv"
 
 
 def read_data(data: DataFrames) -> pd.DataFrame:
@@ -25,9 +25,9 @@ def read_data(data: DataFrames) -> pd.DataFrame:
         raise DataNotFoundError(f"No data at path: {data_path}")
     match data:
         case DataFrames.NLP_TICKETS_TRAIN:
-            return pd.read_csv(data_path)
+            return pd.read_csv(data_path, sep=";")
         case DataFrames.NLP_TICKETS_TEST:
-            return pd.read_csv(data_path)
+            return pd.read_csv(data_path, sep=";")
         case _:
             raise DataNotFoundError(f"No data at path: {data}")
 
@@ -46,6 +46,15 @@ class NLPDataManager:
             if not Path(get_correct_data_path(df.value)).exists():
                 return False
         return True
+
+class NLPTicketsData:
+    def __init__(self, data_manager: NLPDataManager):
+        self.data_manager = data_manager
+    def get_train_data(self):
+        return self.data_manager.dataframes["train"]
+
+    def get_test_data(self):
+        return self.data_manager.dataframes["test"]
 
 
 class ModelService:
