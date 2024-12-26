@@ -101,24 +101,23 @@ async def upload_data(
 ):
     """Upload new data files"""
     try:
-        # tickets_df = pd.read_csv(hierarchy_file.file)
-        # hierarchy_df = pd.read_csv(
-        #     tickets_file.file,
-        #     converters={
-        #         "immediateDescendants": literal_eval,
-        #         "allDescendants": literal_eval,
-        #     },
-        # )
         tickets_df = pd.read_csv(tickets_file.file, sep=";")
+        tickets_df["date"] = pd.to_datetime(tickets_df["date"], format="%d.%m.%Y")
+        hierarchy_df = pd.read_csv(hierarchy_file.file, converters={
+            "immediateDescendants": literal_eval,
+            "allDescendants": literal_eval,
+        })
         
         # Печатаем названия столбцов для отладки
         print("Columns in the file:", tickets_df.columns)
 
-        # Преобразуем колонку `date` в формат datetime
-        tickets_df["date"] = pd.to_datetime(tickets_df["date"], format="%d.%m.%Y")
+        data_service.update_data(tickets_df, "tickets")
+        data_service.update_data(hierarchy_df, "hierarchy")
         
-        # Логика обработки данных (например, сохранение или обновление)
-        # data_service.update_data(tickets_df)
+        tickets_data = TSTicketsData(data_service)
+        hierarchy_data = TSHierarchyData(data_service)
+        all_data = TSDataIntersection(tickets_data, hierarchy_data)
+        ts_predictor = TSPredictor(all_data)
         print(tickets_df.head())  # Для проверки вывода данных
 
         return {"message": "Data updated successfully"}
