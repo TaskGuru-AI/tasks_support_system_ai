@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class DataFrames(Enum):
     NLP_TICKETS_TRAIN = "data/nlp_tickets_train.csv"
-    NLP_TICKETS_TEST = "assets/nlp_tickets_test.csv"
+    NLP_TICKETS_TEST = "data/nlp_tickets_test.csv"
 
 
 def read_data(data: DataFrames) -> pd.DataFrame:
