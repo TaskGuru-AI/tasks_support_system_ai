@@ -84,7 +84,6 @@ volumes:
       o: bind
       device: /opt/app/volumes/minio
 
-
 networks:
   app-network:
     driver: bridge
