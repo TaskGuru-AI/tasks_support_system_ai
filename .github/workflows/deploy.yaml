@@ -60,7 +60,7 @@ jobs:
             docker compose build
             docker compose up -d
 
-            docker exec app-backend-1 poetry run minio-sync pull
+            docker compose exec backend poetry run minio-sync pull
 
             # Cleanup unused images
             docker image prune -f
