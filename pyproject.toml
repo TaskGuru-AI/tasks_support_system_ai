@@ -22,8 +22,9 @@ fastapi = {extras = ["standard"], version = "^0.115.5"}
 u8darts = {extras = ["notorch"], version = "^0.31.0"}
 minio = "^7.2.12"
 python-dotenv = "^1.0.1"
+uuid = "^1.30"
 pydantic-settings = "^2.7.0"
-
+imblearn = "^0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.3"
