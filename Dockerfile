@@ -1,7 +1,17 @@
 FROM python:3.12-slim AS base
 
 # install libgomp1
-RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    libgomp1 \
+    curl \
+    ca-certificates \
+    cargo && \
+    cargo install just && \
+    apt-get remove -y cargo && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN apt-get update && apt-get install -y curl
 RUN apt-get install just
 WORKDIR /app
