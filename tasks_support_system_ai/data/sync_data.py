@@ -35,7 +35,8 @@ def cli():
 def pull():
     """Pull all data from MinIO to local ./data folder"""
     try:
-        Path.mkdir(Path("data"), exist_ok=True, parents=True)
+        data_path = Path("data")
+        data_path.mkdir(exist_ok=True, parents=True)
 
         objects = client.list_objects(BUCKET_NAME, recursive=True)
         for obj in objects:
@@ -43,6 +44,15 @@ def pull():
             Path.mkdir(Path(local_path).parent, exist_ok=True, parents=True)
             client.fget_object(BUCKET_NAME, obj.object_name, local_path)
             click.echo(f"Downloaded: {obj.object_name}")
+        if os.name != "nt":  # Skip permission setting on Windows
+            for path in data_path.rglob("*"):
+                try:
+                    if path.is_dir():
+                        path.chmod(0o777)
+                    else:
+                        path.chmod(0o666)
+                except Exception as e:
+                    click.echo(f"Warning: Could not set permissions for {path}: {e}", err=True)
 
         click.echo("Pull completed successfully")
 

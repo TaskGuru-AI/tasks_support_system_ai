@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm 
 RUN apt-get update && apt-get install -y curl
 
 WORKDIR /app
-RUN mkdir -p /app/data && chmod 777 /app/data
+RUN mkdir -p /app/data && chmod -R 777 /app/data
 
 RUN pip install poetry
 

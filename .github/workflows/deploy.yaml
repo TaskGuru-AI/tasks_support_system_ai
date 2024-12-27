@@ -42,6 +42,11 @@ jobs:
 
             mkdir -p data
 
+            # Clean up Docker resources (before new deployment)
+            docker system prune -af --filter "until=24h"  # Remove unused objects older than 24h
+            docker builder prune -af --filter "until=24h"  # Clean build cache
+
+
             # Stop current services
             docker compose down || true
 
