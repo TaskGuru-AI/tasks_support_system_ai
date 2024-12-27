@@ -1,11 +1,15 @@
 import numpy as np
+from tasks_support_system_ai.web.tabs import nlp_overview
 import streamlit as st
 
-tab1, tab2 = st.tabs(["🗃️ Датасет", "📊 Классификация"])
+tab1, tab2, tab3 = st.tabs(["Project info", "🗃️ Train", "📊 Prediction"])
 data = np.random.randn(10, 1)
 
-tab1.subheader("Описание датасета")
-tab1.write(data)
+with tab1:
+    nlp_overview()
 
-tab2.subheader("Модель классификации")
-tab2.line_chart(data)
+tab2.subheader("Описание датасета")
+tab2.write(data)
+
+tab3.subheader("Модель классификации")
+tab3.line_chart(data)
