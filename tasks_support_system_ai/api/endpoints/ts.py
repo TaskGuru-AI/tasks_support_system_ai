@@ -27,8 +27,7 @@ router = APIRouter()
 
 executor = ProcessPoolExecutor()
 data_service = TSDataManager()
-# make it resilient, do not fail if there is no data locally
-# remove duplication
+
 data_service.load_data()
 tickets_data = TSTicketsData(data_service)
 hierarchy_data = TSHierarchyData(data_service)
@@ -50,7 +49,7 @@ async def get_queues():
 
 @router.get("/api/historical/{queue_id}")
 async def get_historical_ts(queue_id: int) -> TimeSeriesData:
-    data_queue = all_data.get_df_slice(queue_id).reset_index()
+    data_queue = all_data.get_df_slice(queue_id)
     timestamps = data_queue["date"].dt.strftime("%Y-%m-%d").tolist()
 
     return TimeSeriesData(
