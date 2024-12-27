@@ -6,7 +6,7 @@ def get_correct_data_path(path: str | Path) -> Path:
     possible_paths: list[Path] = [
         # index 2 is hardcode and dependent on position of this file
         Path(__file__).parents[2] / "data" / path,
-        Path("/app/data") / path,
+        Path("/opt/app/data") / path,
         Path("data") / path,
     ]
 
