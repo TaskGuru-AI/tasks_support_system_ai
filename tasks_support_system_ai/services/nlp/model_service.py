@@ -17,7 +17,7 @@ class ModelService:
         Initialize the model service.
         """
         self.models_dir = Path("models/nlp")
-        self.models_dir.mkdir(exist_ok=True)
+        self.models_dir.mkdir(exist_ok=True, parents=True)
         self.models_statistics = {}
         self.current_loaded_model: str | None = None
         self.max_loaded_models = 10

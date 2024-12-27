@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED=1
 RUN pip install poetry
 
 FROM base AS deps
-COPY pyproject.toml poetry.lock ./
+COPY pyproject.toml poetry.lock README.md ./
 RUN poetry config virtualenvs.create false \
     && poetry install --no-root --no-interaction --no-ansi
 
