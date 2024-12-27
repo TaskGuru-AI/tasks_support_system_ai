@@ -70,6 +70,17 @@ def push():
                 client.copy_object(backup_bucket, obj.object_name, source)
             click.echo(f"Backup created in bucket: {backup_bucket}")
 
+            # remove main bucket
+            objects = client.list_objects(BUCKET_NAME, recursive=True)
+            for obj in objects:
+                client.remove_object(BUCKET_NAME, obj.object_name)
+
+            client.remove_bucket(BUCKET_NAME)
+            click.echo(f"Removed main bucket: {BUCKET_NAME}")
+
+            client.make_bucket(BUCKET_NAME)
+            click.echo(f"Recreated bucket: {BUCKET_NAME}")
+
         all_buckets = [
             bucket.name
             for bucket in client.list_buckets()
@@ -87,7 +98,7 @@ def push():
         for root, _, files in os.walk("data"):
             for file in files:
                 local_path = Path(root) / file
-                object_name = os.path.relpath(local_path, "data")
+                object_name = str(Path(os.path.relpath(local_path, "data")).as_posix())
                 client.fput_object(BUCKET_NAME, object_name, local_path)
                 click.echo(f"Uploaded: {object_name}")
 
