@@ -40,6 +40,9 @@ jobs:
             set -e
             cd /opt/app
 
+            export UID=$(id -u)
+            export GID=$(id -g)
+
             # Stop current services
             docker compose down || true
 
