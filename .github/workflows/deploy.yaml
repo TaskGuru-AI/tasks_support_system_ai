@@ -65,13 +65,8 @@ jobs:
             rm -rf temp
 
             # костыльно, лучше уметь подтягивать данные в бэкенде
-            docker compose down
             docker compose build
-            docker compose up -d minio
-            sleep 10
-            docker compose exec backend poetry run minio-sync pull
-            docker compose up -d
-
+            docker compose run backend poetry run minio-sync pull
             docker compose up -d
 
             # Cleanup unused images
