@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class LogisticConfig(BaseModel):
@@ -25,3 +25,18 @@ class ModelResponse(BaseModel):
     """
 
     id: str
+
+
+class ClassMetrics(BaseModel):
+    precision: float
+    recall: float
+    f1_score: float = Field(0, alias="f1-score")
+    support: float
+
+
+class ClassificationReport(BaseModel):
+    roc_auc: float
+    accuracy: float
+    macro_avg: ClassMetrics
+    weighted_avg: ClassMetrics
+    classes: dict[str, ClassMetrics]
