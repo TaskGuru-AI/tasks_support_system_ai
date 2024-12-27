@@ -36,7 +36,7 @@ services:
     networks:
       - minio_network
     volumes:
-      - minio_data:/data
+      - /opt/app/volumes/minio:/data
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
@@ -55,7 +55,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/minio.conf:/etc/nginx/conf.d/minio.conf
+      - ./nginx/support.conf:/etc/nginx/conf.d/support.conf
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - minio
@@ -64,6 +65,12 @@ services:
 
 volumes:
   minio_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/app/volumes/minio
+
 
 networks:
   app-network:
