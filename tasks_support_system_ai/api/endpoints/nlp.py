@@ -3,10 +3,10 @@ from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter
 
+from tasks_support_system_ai.api.models.common import ErrorResponse, SuccessResponse
 from tasks_support_system_ai.api.models.nlp import ClassificationReport, ClassMetrics, FitRequest
 from tasks_support_system_ai.data.nlp.reader import NLPDataManager, NLPTicketsData
 from tasks_support_system_ai.services.nlp.predictor import NLPPredictor
-from tasks_support_system_ai.api.models.common import ErrorResponse, SuccessResponse
 
 router = APIRouter()
 executor = ThreadPoolExecutor()
@@ -39,7 +39,7 @@ async def get_statistics(id: str):
             key: ClassMetrics(**value)
             for key, value in classification_report_data.items()
             if isinstance(value, dict)
-               and key not in ["accuracy", "macro avg", "weighted avg", "roc_auc"]
+            and key not in ["accuracy", "macro avg", "weighted avg", "roc_auc"]
         },
     )
 
@@ -48,15 +48,10 @@ async def get_statistics(id: str):
 async def remove_nlp_model(id: str):
     try:
         nlp_predictor.remove_model(id)
-        return SuccessResponse(
-            status = "success",
-            message = f"model {id} was successfully removed"
-        )
+        return SuccessResponse(status="success", message=f"model {id} was successfully removed")
     except KeyError:
-        return ErrorResponse(
-            status="error",
-            message="Model not found"
-        )
+        return ErrorResponse(status="error", message="Model not found")
+
 
 # TODO: Code Predict methods
 # @router.post("/api/predict_nlp")

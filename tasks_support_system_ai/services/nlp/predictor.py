@@ -56,7 +56,6 @@ class NLPPredictor:
         model_service.remove_model(model_id)
 
 
-
 def train_logistic_model(train: pd.DataFrame, test: pd.DataFrame, config: LogisticConfig) -> str:
     """
     Method to train a Logistic Regression model

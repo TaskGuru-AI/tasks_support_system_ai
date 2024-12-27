@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from typing import Optional
 
 
 class HealthCheck(BaseModel):
@@ -10,16 +9,19 @@ class HealthCheck(BaseModel):
 
 class BaseResponse(BaseModel):
     """Base response model for API responses."""
+
     status: str
     message: str
 
 
 class SuccessResponse(BaseResponse):
     """Response model for successful API responses."""
-    data: Optional[dict] = None
+
+    data: dict | None = None
 
 
 class ErrorResponse(BaseResponse):
     """Response model for error API responses."""
+
     error_code: int
-    error_details: Optional[str] = None
+    error_details: str | None = None

@@ -3,7 +3,7 @@ import logging
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
-from tasks_support_system_ai.utils.nlp import save, delete
+from tasks_support_system_ai.utils.nlp import delete, save
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
