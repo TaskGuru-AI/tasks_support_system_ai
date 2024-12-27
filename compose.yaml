@@ -1,6 +1,10 @@
 services:
   backend:
-    build: .
+    build:
+      context: .
+      args:
+        USER_ID: ${DOCKER_UID:-1000}
+        GROUP_ID: ${DOCKER_GID:-1000}
     command: poetry run uvicorn tasks_support_system_ai.main:app --host 0.0.0.0 --port 8000
     user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
     ports:
