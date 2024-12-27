@@ -1,9 +1,6 @@
 services:
   backend:
     build: .
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
     command: poetry run uvicorn tasks_support_system_ai.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
@@ -30,6 +27,12 @@ services:
       IS_DOCKER: 1
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       backend:
         condition: service_healthy
@@ -63,8 +66,15 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - minio
+      - frontend
     networks:
       - minio_network
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 volumes:
   minio_data:

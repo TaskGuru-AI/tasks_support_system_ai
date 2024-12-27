@@ -57,9 +57,11 @@ jobs:
             mv temp/* temp/.[!.]* .
             rm -rf temp
 
-            # Pull new images and restart
-            docker compose pull
-            docker compose up -d --build
+            # Set Docker build options with DNS
+            export DOCKER_DEFAULT_OPTS="--dns 8.8.8.8 --dns 8.8.4.4"
+            # Or modify docker compose command
+            DOCKER_BUILDKIT=1 docker compose build --build-arg DOCKER_OPTS="--dns 8.8.8.8 --dns 8.8.4.4"
+            docker compose up -d
 
             # Cleanup unused images
             docker image prune -f
