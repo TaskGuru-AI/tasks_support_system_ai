@@ -63,4 +63,4 @@ jobs:
             # Cleanup unused images
             docker image prune -f
 
-            just pull-data
+            poetry run minio-sync pull
