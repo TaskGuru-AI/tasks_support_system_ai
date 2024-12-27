@@ -66,7 +66,9 @@ jobs:
 
             # костыльно, лучше уметь подтягивать данные в бэкенде
             docker compose build
-            docker compose run backend poetry run minio-sync pull
+            docker compose up -d
+            docker compose exec backend poetry run minio-sync pull
+            docker compose down
             docker compose up -d
 
             # Cleanup unused images
