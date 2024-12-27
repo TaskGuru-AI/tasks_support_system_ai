@@ -65,9 +65,9 @@ jobs:
             rm -rf temp
 
             docker compose build
-            docker compose up -d
-
             docker compose exec backend poetry run minio-sync pull
+
+            docker compose up -d
 
             # Cleanup unused images
             docker image prune -f
