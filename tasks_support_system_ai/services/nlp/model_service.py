@@ -3,7 +3,7 @@ import logging
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
-from tasks_support_system_ai.utils.nlp import save
+from tasks_support_system_ai.utils.nlp import delete, save
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ class ModelService:
         """
         Initialize the model service.
         """
-        self.models_dir = Path("models")
+        self.models_dir = Path("models/nlp")
         self.models_dir.mkdir(exist_ok=True)
         self.models_statistics = {}
         self.current_loaded_model: str | None = None
@@ -38,18 +38,17 @@ class ModelService:
     def get_statistics(self, model_id: str) -> dict:
         return self.models_statistics.get(model_id, {})
 
-    def remove_model(self, model_name: str):
+    def remove_model(self, model_id: str):
         """
         Remove a model from storage.
         :param model_name: The name of the model to remove.
         """
-        model_path = self.models_dir / model_name
-        if model_path.exists():
-            model_path.unlink()
-            self.loaded_models.pop(model_name, None)
-            print(f"Model '{model_name}' removed.")
+        file_path = self.models_dir / f"{model_id}.model"
+        if file_path.exists():
+            delete(file_path)
+            print(f"Model '{model_id}' removed.")
         else:
-            print(f"Model '{model_name}' does not exist.")
+            print(f"Model '{model_id}' does not exist.")
 
     def load_model(self, model_name: str):
         """

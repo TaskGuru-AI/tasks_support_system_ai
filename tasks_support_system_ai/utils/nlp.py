@@ -13,7 +13,7 @@ def save(model, file_path: str) -> None:
 
 def delete(file_path: str) -> None:
     if Path.exists(file_path):
-        Path.remove(file_path)
+        Path.unlink(file_path)
     else:
         raise FileNotFoundError("Model not found")
 

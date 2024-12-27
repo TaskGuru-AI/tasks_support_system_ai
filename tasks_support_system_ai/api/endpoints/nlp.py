@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter
 
+from tasks_support_system_ai.api.models.common import ErrorResponse, SuccessResponse
 from tasks_support_system_ai.api.models.nlp import ClassificationReport, ClassMetrics, FitRequest
 from tasks_support_system_ai.data.nlp.reader import NLPDataManager, NLPTicketsData
 from tasks_support_system_ai.services.nlp.predictor import NLPPredictor
@@ -25,8 +26,8 @@ async def fit_nlp(request: FitRequest) -> str:
     return model_id
 
 
-@router.get("/api/statistics/{id}")
-async def get_statistics(id: str) -> ClassificationReport:
+@router.get("/api/statistics/{id}", response_model=ClassificationReport)
+async def get_statistics(id: str):
     classification_report_data = nlp_predictor.get_classification_report(id)
     print(classification_report_data)
     return ClassificationReport(
@@ -41,3 +42,22 @@ async def get_statistics(id: str) -> ClassificationReport:
             and key not in ["accuracy", "macro avg", "weighted avg", "roc_auc"]
         },
     )
+
+
+@router.delete("/api/remove_nlp/{id}", response_model=SuccessResponse)
+async def remove_nlp_model(id: str):
+    try:
+        nlp_predictor.remove_model(id)
+        return SuccessResponse(status="success", message=f"model {id} was successfully removed")
+    except KeyError:
+        return ErrorResponse(status="error", message="Model not found")
+
+
+# TODO: Code Predict methods
+# @router.post("/api/predict_nlp")
+# async def predict_nlp():
+#     return
+
+# @router.post("/api/predict_nlp_csv)
+# async def predict_nlp():
+#     return

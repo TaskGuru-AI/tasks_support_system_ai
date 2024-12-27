@@ -52,6 +52,9 @@ class NLPPredictor:
     def get_classification_report(self, id: str) -> dict:
         return model_service.get_statistics(id)
 
+    def remove_model(self, model_id: str) -> None:
+        model_service.remove_model(model_id)
+
 
 def train_logistic_model(train: pd.DataFrame, test: pd.DataFrame, config: LogisticConfig) -> str:
     """
