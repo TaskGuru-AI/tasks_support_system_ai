@@ -1,15 +1,12 @@
 FROM python:3.12-slim AS base
 
-# install libgomp1
+# install libgomp1 and just
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     libgomp1 \
     curl \
-    ca-certificates \
-    cargo && \
-    cargo install just && \
-    apt-get remove -y cargo && \
-    apt-get autoremove -y && \
+    ca-certificates && \
+    curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin && \
     rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && apt-get install -y curl
