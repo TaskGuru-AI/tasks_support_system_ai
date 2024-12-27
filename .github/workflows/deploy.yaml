@@ -40,8 +40,7 @@ jobs:
             set -e
             cd /opt/app
 
-            export DOCKER_UID=$(id -u)
-            export DOCKER_GID=$(id -g)
+            mkdir -p data
 
             # Stop current services
             docker compose down || true
