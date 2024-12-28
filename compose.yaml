@@ -3,9 +3,11 @@ services:
     build: .
     command: poetry run uvicorn tasks_support_system_ai.main:app --host 0.0.0.0 --port 8000
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./data:/app/data
+    env_file:
+      - ./.env
     networks:
       - app-network
     healthcheck:
@@ -20,13 +22,19 @@ services:
     build: .
     command: poetry run streamlit run tasks_support_system_ai/web/app.py --server.port 8501 --server.address 0.0.0.0
     ports:
-      - "8501:8501"
+      - "127.0.0.1:8501:8501"
     volumes:
       - ./data:/app/data
     environment:
       IS_DOCKER: 1
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       backend:
         condition: service_healthy
@@ -36,7 +44,7 @@ services:
     networks:
       - minio_network
     volumes:
-      - minio_data:/data
+      - /opt/app/volumes/minio:/data
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
@@ -55,15 +63,23 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/minio.conf:/etc/nginx/conf.d/minio.conf
+      - ./nginx/support.conf:/etc/nginx/conf.d/support.conf
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - minio
+      - frontend
     networks:
       - minio_network
+      - app-network
 
 volumes:
   minio_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/app/volumes/minio
 
 networks:
   app-network:

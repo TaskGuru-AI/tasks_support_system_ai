@@ -38,6 +38,7 @@ ts_predictor = TSPredictor(all_data)
 
 @router.get("/api/data-status")
 async def get_data_status():
+    data_service.load_data()
     return {"has_data": data_service.is_data_local()}
 
 

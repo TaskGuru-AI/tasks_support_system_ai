@@ -166,3 +166,4 @@ cython_debug/
 *.csv
 *.tsv
 *.model
+key
