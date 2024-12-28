@@ -64,12 +64,10 @@ jobs:
             mv temp/* temp/.[!.]* .
             rm -rf temp
 
-            # костыльно, лучше уметь подтягивать данные в бэкенде
+            # данные подгружаются после запуска всех контейнеров
             docker compose build
             docker compose up -d
             docker compose exec backend poetry run minio-sync pull
-            docker compose down
-            docker compose up -d
 
             # Cleanup unused images
             docker image prune -f
