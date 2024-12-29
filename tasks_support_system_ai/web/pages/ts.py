@@ -78,6 +78,20 @@ def upload_section():
 
         if hierarchy_file and st.button("Upload Hierarchy Data"):
             upload_file("hierarchy", hierarchy_file)
+    if st.button("Reload Local Data"):
+        try:
+            with st.spinner("Reloading data..."):
+                response = requests.get(f"{api_url}/api/reload_local_data")
+
+                if response.ok:
+                    st.success("Data reloaded successfully!")
+                    result = response.json()
+                    st.write(result)
+                    st.rerun()
+                else:
+                    st.error(f"Error: {response.status_code} - {response.text}")
+        except Exception as e:
+            st.error(f"Failed to reload data: {str(e)}")
 
 
 # @st.cache_data(ttl=600)
