@@ -7,6 +7,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from tasks_support_system_ai.api.models.ts import (
     AverageLoadWeekdays,
+    AverageLoadWeekly,
     ForecastRequest,
     QueueStats,
     TimeGranularity,
@@ -67,6 +68,18 @@ async def get_daily_average(queue_id: int) -> AverageLoadWeekdays:
     return AverageLoadWeekdays(
         weekdays=weekday_names,
         average_load=weekday_avg.values,
+        queue_id=queue_id,
+    )
+
+@router.get("/api/weekly_average/{queue_id}")
+async def get_weekly_average(queue_id: int) -> AverageLoadWeekly:
+    df = all_data.get_df_slice(queue_id)
+    df['week_number'] = df["date"].dt.isocalendar().week
+    weeknames = [f"week {i}" for i in range(1, 53)]
+    week_avg = df.groupby('week_number')["new_tickets"].mean()
+    return AverageLoadWeekly(
+        week=weeknames,
+        average_load=week_avg.values,
         queue_id=queue_id,
     )
 

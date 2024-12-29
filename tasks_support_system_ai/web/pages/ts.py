@@ -150,6 +150,18 @@ def create_weekday_distribution():
     return fig
 
 
+def create_weekly_distribution():
+    weekly_response = requests.get(f"{api_url}/api/weekly_average/{selected_queue['id']}")
+    response = weekly_response.json()
+
+    fig = go.Figure(data=[go.Bar(x=response["week"], y=response["average_load"])])
+    fig.update_layout(
+        title="Average Weekly Load",
+        xaxis_title="Week",
+        yaxis_title="Average Number of Tickets",
+    )
+    return fig
+
 def create_subqueues_stack_plot(data):
     fig = px.area(
         data, x="timestamp", y="value", color="subqueue", title="Load Distribution Across Subqueues"
@@ -216,6 +228,9 @@ if queues:
             # Weekday distribution (only for daily data)
             if granularity == "Daily":
                 st.plotly_chart(create_weekday_distribution())
+            
+            if granularity == "Weekly":
+                st.plotly_chart(create_weekly_distribution())
 
             # if len(df) > 14:  # Minimum required for decomposition
             #     decomposition = seasonal_decompose(df["value"], period=7)
