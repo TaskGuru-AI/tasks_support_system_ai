@@ -1,11 +1,11 @@
 import logging
+from contextlib import suppress
 from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
 
 import darts
 import pandas as pd
-from contextlib import suppress
 
 from tasks_support_system_ai.api.models.ts import QueueStats, QueueStructure, TimeGranularity
 from tasks_support_system_ai.core.exceptions import DataNotFoundError
