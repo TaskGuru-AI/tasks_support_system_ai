@@ -152,26 +152,30 @@ def create_weekday_distribution():
 
 
 def create_weekly_distribution(start_date=None, end_date=None):
-    params = {}
-    if start_date and end_date:
-        params["start_date"] = start_date
-        params["end_date"] = end_date
-        url = f"{api_url}/api/weekly_average/{selected_queue['id']}"
-        weekly_response = requests.get(url=url, params=params)
-    else:
-        weekly_response = requests.get(f"{api_url}/api/weekly_average/{selected_queue['id']}")
-    response = weekly_response.json()
-    average_load = []
-    for load in response["average_load"]:
-        if load != 0:
-            average_load.append(load)
-    fig = go.Figure(data=[go.Bar(x=response["week"], y=average_load)])
-    fig.update_layout(
-        title="Average Weekly Load",
-        xaxis_title="Week",
-        yaxis_title="Average Number of Tickets",
-    )
-    return fig
+    try:
+        params = {}
+        if start_date and end_date:
+            params["start_date"] = start_date
+            params["end_date"] = end_date
+            url = f"{api_url}/api/weekly_average/{selected_queue['id']}"
+            weekly_response = requests.get(url=url, params=params)
+        else:
+            weekly_response = requests.get(f"{api_url}/api/weekly_average/{selected_queue['id']}")
+        response = weekly_response.json()
+        average_load = []
+        for load in response["average_load"]:
+            if load != 0:
+                average_load.append(load)
+        fig = go.Figure(data=[go.Bar(x=response["week"], y=average_load)])
+        fig.update_layout(
+            title="Average Weekly Load",
+            xaxis_title="Week",
+            yaxis_title="Average Number of Tickets",
+        )
+        return fig
+    except requests.exceptions.HTTPError as http_err:
+        error_detail = http_err.response.json().get("detail", "Unknown error")
+        st.error(f"HTTP error occurred: {error_detail}")
 
 
 def create_subqueues_stack_plot(data):
@@ -197,7 +201,7 @@ if queues:
 
     date_range = st.sidebar.date_input(
         "Select Date Range",
-        value=(datetime.now() - timedelta(days=30), datetime.now()),
+        value=(datetime(2018, 1, 1) - timedelta(days=30), datetime(2018, 1, 1)),
         max_value=datetime.now(),
     )
 

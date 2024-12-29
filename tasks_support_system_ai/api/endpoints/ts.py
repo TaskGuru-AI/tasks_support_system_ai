@@ -77,11 +77,28 @@ async def get_daily_average(queue_id: int) -> AverageLoadWeekdays:
 @router.get("/api/weekly_average/{queue_id}")
 async def get_weekly_average(
     queue_id: int,
-    start_date: Annotated[datetime | None, Query(None)],
-    end_date: Annotated[datetime | None, Query(None)],
+    start_date: Annotated[datetime, Query(description="Начальная дата в формате YYYY-MM-DD")]
+    | None = None,
+    end_date: Annotated[datetime, Query(description="Конечная дата в формате YYYY-MM-DD")]
+    | None = None,
 ) -> AverageLoadWeekly:
     df = all_data.get_df_slice(queue_id)
     df["week_number"] = df["date"].dt.isocalendar().week
+    min_date = df["date"].min()
+    max_date = df["date"].max()
+    if start_date and (start_date < min_date or start_date > max_date):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Start date {start_date} is out of range."
+            "Data available from {min_date} to {max_date}.",
+        )
+
+    if end_date and (end_date < min_date or end_date > max_date):
+        raise HTTPException(
+            status_code=400,
+            detail=f"End date {end_date} is out of range."
+            "Data available from {min_date} to {max_date}.",
+        )
     if start_date:
         df = df[df["date"] >= start_date]
     if end_date:
