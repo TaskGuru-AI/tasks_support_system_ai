@@ -102,13 +102,13 @@ async def upload_data(
     try:
         tickets_df = tickets_file
         hierarchy_df = hierarchy_file
-        
+
         # Печатаем названия столбцов для отладки
         print("Columns in the file:", tickets_df.columns)
 
         data_service.update_data(tickets_df, "tickets")
         data_service.update_data(hierarchy_df, "hierarchy")
-        
+
         # tickets_data = TSTicketsData(data_service)
         # hierarchy_data = TSHierarchyData(data_service)
         # all_data = TSDataIntersection(tickets_data, hierarchy_data)

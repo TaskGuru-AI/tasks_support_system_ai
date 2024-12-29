@@ -57,36 +57,36 @@ if not st.session_state.data_available:
 st.write("Загрузите файлы CSV с данными о тикетах и иерархии.")
 
 
-st.cache_data
 def load_files():
     tickets_file = st.file_uploader("Файл с данными о тикетах", type=["csv"])
     hierarchy_file = st.file_uploader("Файл с данными об иерархии", type=["csv"])
     return tickets_file, hierarchy_file
 
 
-
-
+@st.cache_data(ttl=600)
 def post_data(tickets_file, hierarchy_file):
     try:
         files = {
-        'tickets_file': (tickets_file.name, tickets_file.read()),
-        'hierarchy_file': (hierarchy_file.name, hierarchy_file.read()),
+            "tickets_file": (tickets_file.name, tickets_file.read()),
+            "hierarchy_file": (hierarchy_file.name, hierarchy_file.read()),
         }
         response = requests.post(url=f"{api_url}/api/upload_data", files=files)
         response.raise_for_status()
         st.success("Данные успешно загружены и обновлены!")
         st.session_state.data_available = True
         st.balloons()
-            
+
     except requests.exceptions.RequestException as e:
         st.error(f"Error fetching queues: {str(e)}")
     except Exception as e:
         st.exception(f"Произошла непредвиденная ошибка: {e}")
 
+
 tickets_file, hierarchy_file = load_files()
 
-if tickets_file and hierarchy_file and st.button('Отправить данные'):
+if tickets_file and hierarchy_file and st.button("Отправить данные"):
     post_data(tickets_file, hierarchy_file)
+
 
 @st.cache_data(ttl=600)
 def fetch_queues():
