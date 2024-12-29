@@ -8,6 +8,7 @@ import pandas as pd
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from tasks_support_system_ai.api.models.ts import (
+    AverageLoadWeekdays,
     ForecastRequest,
     QueueStats,
     TimeGranularity,
@@ -37,7 +38,7 @@ ts_predictor = TSPredictor(all_data)
 
 @router.get("/api/data-status")
 async def get_data_status():
-    data_service.load_data()
+    # data_service.load_data()
     return {"has_data": data_service.is_data_local()}
 
 
@@ -55,6 +56,19 @@ async def get_historical_ts(queue_id: int) -> TimeSeriesData:
     return TimeSeriesData(
         timestamps=timestamps,
         values=data_queue["new_tickets"].tolist(),
+        queue_id=queue_id,
+    )
+
+
+@router.get("/api/daily_average/{queue_id}")
+async def get_daily_average(queue_id: int) -> AverageLoadWeekdays:
+    df = all_data.get_df_slice(queue_id)
+    weekday_avg = df.groupby(df["date"].dt.dayofweek)["new_tickets"].mean()
+    weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+    return AverageLoadWeekdays(
+        weekdays=weekday_names,
+        average_load=weekday_avg.values,
         queue_id=queue_id,
     )
 

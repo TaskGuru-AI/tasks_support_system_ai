@@ -49,6 +49,12 @@ class TimeSeriesData(BaseModel):
     granularity: TimeGranularity = TimeGranularity.DAILY
 
 
+class AverageLoadWeekdays(BaseModel):
+    queue_id: int
+    weekdays: list[str]
+    average_load: list[float]
+
+
 class ForecastRequest(BaseModel):
     queue_id: int
     forecast_horizon: int
