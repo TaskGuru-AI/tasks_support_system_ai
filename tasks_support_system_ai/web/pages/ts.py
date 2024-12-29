@@ -28,12 +28,142 @@ if "data_available" not in st.session_state:
 def check_data_availability():
     try:
         response = requests.get(f"{api_url}/api/data-status")
-        return response.json()["has_data"]
+        return response.json()["status"]
     except requests.exceptions.RequestException:
         return False
 
 
 st.session_state.data_available = check_data_availability()
+
+
+st.write("Загрузите файлы CSV с данными о тикетах и иерархии.")
+
+
+def handle_reload():
+    try:
+        response = requests.get(f"{api_url}/api/reload_local_data")
+
+        if response.ok:
+            st.session_state.operation_status = {
+                "type": "success",
+                "message": "Data reloaded successfully!",
+                "result": response.json(),
+            }
+        else:
+            st.session_state.operation_status = {
+                "type": "error",
+                "message": f"Error: {response.status_code} - {response.text}",
+            }
+    except Exception as e:
+        st.session_state.operation_status = {
+            "type": "error",
+            "message": f"Failed to reload data: {str(e)}",
+        }
+
+
+def update_button():
+    if st.button("Reload Local Data"):
+        handle_reload()
+        st.rerun()
+
+
+update_button()
+
+
+def get_sample_data(df_type: str) -> str:
+    """Get sample data from backend"""
+    try:
+        response = requests.get(f"{api_url}/api/sample_data", params={"df_type": df_type})
+        return response.json()["data"]
+    except Exception:
+        # Fallback sample data
+        if df_type == "tickets":
+            return "queueId;date;new_tickets\n1;2017-01-01;10"
+        return "queue_id,level,immediateDescendants,allDescendants\n1,1,'[2;3]','[2;3;4]'"
+
+
+def init_session_state():
+    if "operation_status" not in st.session_state:
+        st.session_state.operation_status = None
+    if "last_upload" not in st.session_state:
+        st.session_state.last_upload = None
+
+
+def handle_upload(df_type: str, file):
+    try:
+        file.seek(0)
+        files = {"file": file}
+        data = {"df_type": df_type}
+
+        with st.spinner(f"Uploading {df_type} data..."):
+            response = requests.post(url=f"{api_url}/api/upload_data", files=files, data=data)
+
+            if response.ok:
+                st.session_state.operation_status = {
+                    "type": "success",
+                    "message": f"{df_type.title()} data uploaded successfully!",
+                    "result": response.json() if response.content else None,
+                }
+                st.session_state.last_upload = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                st.session_state.operation_status = {
+                    "type": "error",
+                    "message": f"Upload failed: {response.json().get('detail', 'Unknown error')}",
+                }
+    except Exception as e:
+        st.session_state.operation_status = {
+            "type": "error",
+            "message": f"Error during upload: {str(e)}",
+        }
+
+
+def display_status():
+    if st.session_state.operation_status:
+        if st.session_state.operation_status["type"] == "success":
+            st.success(st.session_state.operation_status["message"])
+        else:
+            st.error(st.session_state.operation_status["message"])
+
+
+def upload_section():
+    init_session_state()
+    st.header("Data Upload")
+
+    left_col, right_col = st.columns(2)
+
+    with left_col:
+        st.subheader("Tickets Data Upload")
+        # with st.expander("Show sample format for tickets"):
+        #     st.table(get_sample_data("tickets"))
+
+        tickets_file = st.file_uploader(
+            "Upload tickets CSV file (;-separated)", type=["csv"], key="tickets_upload"
+        )
+
+        if tickets_file and st.button("Upload Tickets Data"):
+            handle_upload("tickets", tickets_file)
+            st.rerun()
+
+    with right_col:
+        st.subheader("Hierarchy Data Upload")
+        # with st.expander("Show sample format for hierarchy"):
+        #     st.table(get_sample_data("hierarchy"))
+
+        hierarchy_file = st.file_uploader(
+            "Upload hierarchy CSV file", type=["csv"], key="hierarchy_upload"
+        )
+
+        if hierarchy_file and st.button("Upload Hierarchy Data"):
+            handle_upload("hierarchy", hierarchy_file)
+            st.rerun()
+
+    display_status()
+
+    # не работает, и сообщение об успехе постоянно висит
+    # if st.session_state.operation_status:
+    #     time.sleep(2)  # Show message for 2 seconds
+    #     st.session_state.operation_status = None
+
 
 if not st.session_state.data_available:
     st.warning("⚠️ Данные недоступны")
@@ -53,46 +183,10 @@ if not st.session_state.data_available:
         3. Разместите их в локальном репозитории в папке `./data/`
         4. Установить just и запустите `just generate_data`
     """)
-    # TODO: add buttons to upload data (should be reused)
-    # add option to download data from miniO
     st.stop()
 
 
-st.write("Загрузите файлы CSV с данными о тикетах и иерархии.")
-
-
-def load_files():
-    tickets_file = st.file_uploader("Файл с данными о тикетах", type=["csv"])
-    hierarchy_file = st.file_uploader("Файл с данными об иерархии", type=["csv"])
-    return tickets_file, hierarchy_file
-
-
-@st.cache_data(ttl=600)
-def post_data(tickets_file, hierarchy_file):
-    try:
-        files = {
-            "tickets_file": (tickets_file.name, tickets_file.read()),
-            "hierarchy_file": (hierarchy_file.name, hierarchy_file.read()),
-        }
-        response = requests.post(url=f"{api_url}/api/upload_data", files=files)
-        response.raise_for_status()
-        st.success("Данные успешно загружены и обновлены!")
-        st.session_state.data_available = True
-        st.balloons()
-
-    except requests.exceptions.RequestException as e:
-        st.error(f"Error fetching queues: {str(e)}")
-    except Exception as e:
-        st.exception(f"Произошла непредвиденная ошибка: {e}")
-
-
-tickets_file, hierarchy_file = load_files()
-
-if tickets_file and hierarchy_file and st.button("Отправить данные"):
-    post_data(tickets_file, hierarchy_file)
-
-
-@st.cache_data(ttl=600)
+# @st.cache_data(ttl=600)
 def fetch_queues():
     try:
         response = requests.get(f"{api_url}/api/queues")
@@ -214,6 +308,7 @@ if queues:
     granularity = st.sidebar.selectbox(
         "Time Granularity", options=["Daily", "Weekly", "Monthly"], key="granularity"
     )
+    upload_section()
 
     if selected_queue:
         try:
