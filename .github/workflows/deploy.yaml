@@ -65,10 +65,12 @@ jobs:
             mv temp/* temp/.[!.]* .
             rm -rf temp
 
-            # данные подгружаются после запуска всех контейнеров
-            docker compose build
-            docker compose up -d
+            # сначала поднимаем backend, minio
+            # скачиваем данные из minio
+            # поднимаем фронтенд
+            docker compose up backend minio -d
             docker compose exec backend poetry run minio-sync pull
+            docker compose up frontend nginx -d
 
             # Cleanup unused images
             docker image prune -f

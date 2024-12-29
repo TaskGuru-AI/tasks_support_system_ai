@@ -1,7 +1,9 @@
 from datetime import date, datetime
 from enum import Enum
-from typing import Any, Literal
+from typing import Any
 
+import darts
+import darts.models
 from pydantic import BaseModel
 
 
@@ -47,6 +49,12 @@ class TimeSeriesData(BaseModel):
     granularity: TimeGranularity = TimeGranularity.DAILY
 
 
+class AverageLoadWeekdays(BaseModel):
+    queue_id: int
+    weekdays: list[str]
+    average_load: list[float]
+
+
 class ForecastRequest(BaseModel):
     queue_id: int
     forecast_horizon: int
@@ -73,7 +81,12 @@ class ModelInfo(BaseModel):
     id: str
 
 
+class ModelClass(Enum):
+    linear = darts.models.LinearRegressionModel
+    smoothing = darts.models.ExponentialSmoothing
+
+
 class ModelConfig(BaseModel):
     id: str
-    ml_model_type: Literal["linear", "logistic"]
+    ml_model_type: ModelClass
     hyperparameters: dict[str, Any]

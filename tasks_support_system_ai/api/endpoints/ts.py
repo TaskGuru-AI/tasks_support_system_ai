@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from tasks_support_system_ai.api.models.ts import (
+    AverageLoadWeekdays,
     ForecastRequest,
     QueueStats,
     TimeGranularity,
@@ -25,8 +26,7 @@ router = APIRouter()
 
 executor = ProcessPoolExecutor()
 data_service = TSDataManager()
-# make it resilient, do not fail if there is no data locally
-# remove duplication
+
 data_service.load_data()
 tickets_data = TSTicketsData(data_service)
 hierarchy_data = TSHierarchyData(data_service)
@@ -36,7 +36,7 @@ ts_predictor = TSPredictor(all_data)
 
 @router.get("/api/data-status")
 async def get_data_status():
-    data_service.load_data()
+    # data_service.load_data()
     return {"has_data": data_service.is_data_local()}
 
 
@@ -48,12 +48,25 @@ async def get_queues():
 
 @router.get("/api/historical/{queue_id}")
 async def get_historical_ts(queue_id: int) -> TimeSeriesData:
-    data_queue = all_data.get_df_slice(queue_id).reset_index()
+    data_queue = all_data.get_df_slice(queue_id)
     timestamps = data_queue["date"].dt.strftime("%Y-%m-%d").tolist()
 
     return TimeSeriesData(
         timestamps=timestamps,
         values=data_queue["new_tickets"].tolist(),
+        queue_id=queue_id,
+    )
+
+
+@router.get("/api/daily_average/{queue_id}")
+async def get_daily_average(queue_id: int) -> AverageLoadWeekdays:
+    df = all_data.get_df_slice(queue_id)
+    weekday_avg = df.groupby(df["date"].dt.dayofweek)["new_tickets"].mean()
+    weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+    return AverageLoadWeekdays(
+        weekdays=weekday_names,
+        average_load=weekday_avg.values,
         queue_id=queue_id,
     )
 
