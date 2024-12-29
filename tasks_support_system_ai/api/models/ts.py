@@ -15,16 +15,21 @@ class TimeGranularity(str, Enum):
     QUARTERLY = "quarterly"
     YEARLY = "yearly"
 
+
 DF_TYPE = Literal["hierarchy", "tickets"]
+
+
 class DataFrameResponse(BaseModel):
     columns: list[str]
     data: list[dict[str, Any]]
     shape: tuple[int, int]
     df_type: DF_TYPE
-    
+
+
 class ResponseBool(BaseModel):
     status: bool
     message: str = "success"
+
 
 class QueueStructure(BaseModel):
     queue_id: int

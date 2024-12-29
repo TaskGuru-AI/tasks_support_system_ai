@@ -1,11 +1,12 @@
 import asyncio
+import io
 import math
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from typing import Annotated
-import io
+
 import pandas as pd
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile, Form
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 
 from tasks_support_system_ai.api.models.common import BaseResponse
 from tasks_support_system_ai.api.models.ts import (
@@ -44,6 +45,7 @@ ts_predictor = TSPredictor(all_data)
 @router.get("/api/data-status")
 async def get_data_status() -> ResponseBool:
     return ResponseBool(status=data_service.is_data_local())
+
 
 @router.get("/api/reload_local_data")
 async def reload_local_data() -> BaseResponse:
@@ -181,6 +183,8 @@ async def upload_data(
         return BaseResponse(message="Data updated successfully", status="success")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/api/sample_data")
 async def get_sample_data(
     df_type: Annotated[DF_TYPE, "Тип данных (тикеты или иерархия)"],
