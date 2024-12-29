@@ -11,6 +11,7 @@ from tasks_support_system_ai.api.models.ts import ForecastRequest
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+EXPECTED_DATE_RANGE_LENGTH = 2
 
 st.title("Анализ нагрузки очередей")
 
@@ -132,8 +133,8 @@ def upload_section():
 
     with left_col:
         st.subheader("Tickets Data Upload")
-        with st.expander("Show sample format for tickets"):
-            st.table(get_sample_data("tickets"))
+        # with st.expander("Show sample format for tickets"):
+        #     st.table(get_sample_data("tickets"))
 
         tickets_file = st.file_uploader(
             "Upload tickets CSV file (;-separated)", type=["csv"], key="tickets_upload"
@@ -145,8 +146,8 @@ def upload_section():
 
     with right_col:
         st.subheader("Hierarchy Data Upload")
-        with st.expander("Show sample format for hierarchy"):
-            st.table(get_sample_data("hierarchy"))
+        # with st.expander("Show sample format for hierarchy"):
+        #     st.table(get_sample_data("hierarchy"))
 
         hierarchy_file = st.file_uploader(
             "Upload hierarchy CSV file", type=["csv"], key="hierarchy_upload"
@@ -244,6 +245,33 @@ def create_weekday_distribution():
     return fig
 
 
+def create_weekly_distribution(start_date=None, end_date=None):
+    try:
+        params = {}
+        if start_date and end_date:
+            params["start_date"] = start_date
+            params["end_date"] = end_date
+            url = f"{api_url}/api/weekly_average/{selected_queue['id']}"
+            weekly_response = requests.get(url=url, params=params)
+        else:
+            weekly_response = requests.get(f"{api_url}/api/weekly_average/{selected_queue['id']}")
+        response = weekly_response.json()
+        average_load = []
+        for load in response["average_load"]:
+            if load != 0:
+                average_load.append(load)
+        fig = go.Figure(data=[go.Bar(x=response["week"], y=average_load)])
+        fig.update_layout(
+            title="Average Weekly Load",
+            xaxis_title="Week",
+            yaxis_title="Average Number of Tickets",
+        )
+        return fig
+    except requests.exceptions.HTTPError as http_err:
+        error_detail = http_err.response.json().get("detail", "Unknown error")
+        st.error(f"HTTP error occurred: {error_detail}")
+
+
 def create_subqueues_stack_plot(data):
     fig = px.area(
         data, x="timestamp", y="value", color="subqueue", title="Load Distribution Across Subqueues"
@@ -267,9 +295,15 @@ if queues:
 
     date_range = st.sidebar.date_input(
         "Select Date Range",
-        value=(datetime.now() - timedelta(days=30), datetime.now()),
+        value=(datetime(2018, 1, 1) - timedelta(days=30), datetime(2018, 1, 1)),
         max_value=datetime.now(),
     )
+
+    # Извлечение начальной и конечной даты
+    if isinstance(date_range, tuple) and len(date_range) == EXPECTED_DATE_RANGE_LENGTH:
+        start_date, end_date = date_range
+    else:
+        start_date = end_date = date_range
 
     granularity = st.sidebar.selectbox(
         "Time Granularity", options=["Daily", "Weekly", "Monthly"], key="granularity"
@@ -311,6 +345,14 @@ if queues:
             # Weekday distribution (only for daily data)
             if granularity == "Daily":
                 st.plotly_chart(create_weekday_distribution())
+
+            if granularity == "Weekly":
+                if date_range:
+                    st.plotly_chart(
+                        create_weekly_distribution(start_date=start_date, end_date=end_date)
+                    )
+                else:
+                    st.plotly_chart(create_weekly_distribution())
 
             # if len(df) > 14:  # Minimum required for decomposition
             #     decomposition = seasonal_decompose(df["value"], period=7)

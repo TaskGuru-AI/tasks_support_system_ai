@@ -1,16 +1,16 @@
 import asyncio
-import io
+import math
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+import pandas as pd
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 
 from tasks_support_system_ai.api.models.common import BaseResponse
 from tasks_support_system_ai.api.models.ts import (
-    DF_TYPE,
     AverageLoadWeekdays,
-    DataFrameResponse,
+    AverageLoadWeekly,
     ForecastRequest,
     QueueStats,
     ResponseBool,
@@ -81,6 +81,51 @@ async def get_daily_average(queue_id: int) -> AverageLoadWeekdays:
     )
 
 
+@router.get("/api/weekly_average/{queue_id}")
+async def get_weekly_average(
+    queue_id: int,
+    start_date: Annotated[datetime, Query(description="Начальная дата в формате YYYY-MM-DD")]
+    | None = None,
+    end_date: Annotated[datetime, Query(description="Конечная дата в формате YYYY-MM-DD")]
+    | None = None,
+) -> AverageLoadWeekly:
+    df = all_data.get_df_slice(queue_id)
+    df["week_number"] = df["date"].dt.isocalendar().week
+    min_date = df["date"].min()
+    max_date = df["date"].max()
+    if start_date and (start_date < min_date or start_date > max_date):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Start date {start_date} is out of range."
+            "Data available from {min_date} to {max_date}.",
+        )
+
+    if end_date and (end_date < min_date or end_date > max_date):
+        raise HTTPException(
+            status_code=400,
+            detail=f"End date {end_date} is out of range."
+            "Data available from {min_date} to {max_date}.",
+        )
+    if start_date:
+        df = df[df["date"] >= start_date]
+    if end_date:
+        df = df[df["date"] <= end_date]
+    # Определяем первый понедельник в диапазоне (или ближайший предыдущий)
+    start_week = df["date"].min() - pd.to_timedelta(df["date"].min().weekday(), unit="d")
+    end_week = df["date"].max() + pd.to_timedelta(6 - df["date"].max().weekday(), unit="d")
+    # Рассчитываем количество недель
+    total_weeks = math.ceil((end_week - start_week).days / 7)
+    weeknames = [f"week {i+1}" for i in range(total_weeks)]
+    week_avg = df.groupby("week_number")["new_tickets"].mean()
+    average_load = [week_avg.get(i, 0) for i in range(1, 53)]
+
+    return AverageLoadWeekly(
+        week=weeknames,
+        average_load=average_load,
+        queue_id=queue_id,
+    )
+
+
 @router.get("/api/queue_stats", response_model=QueueStats)
 async def get_queue_stats(
     queue_id: Annotated[int, "Queue ID"],
@@ -118,42 +163,27 @@ async def forecast(request: ForecastRequest) -> TimeSeriesData:
 
 @router.post("/api/upload_data")
 async def upload_data(
-    file: Annotated[UploadFile, File(description="CSV file with data")],
-    df_type: Annotated[DF_TYPE, Form(description="Тип данных (тикеты или иерархия)")],
-) -> BaseResponse:
-    """
-    Upload and process CSV data files.
-
-    - **file**: CSV file containing either tickets or hierarchy data
-    - **df_type**: Type of data frame ('tickets' or 'hierarchy')
-    """
+    tickets_file: Annotated[UploadFile, File(description="CSV file with tickets data")],
+    hierarchy_file: Annotated[UploadFile, File(description="CSV file with hierarchy data")],
+):
+    """Upload new data files"""
     try:
-        contents = await file.read()
+        tickets_df = tickets_file
+        hierarchy_df = hierarchy_file
 
-        file_obj = io.BytesIO(contents)
+        # Печатаем названия столбцов для отладки
+        print("Columns in the file:", tickets_df.columns)
 
-        data_service.update_data(file_obj, df_type)
+        data_service.update_data(tickets_df, "tickets")
+        data_service.update_data(hierarchy_df, "hierarchy")
 
-        return BaseResponse(message="Data updated successfully", status="success")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # tickets_data = TSTicketsData(data_service)
+        # hierarchy_data = TSHierarchyData(data_service)
+        # all_data = TSDataIntersection(tickets_data, hierarchy_data)
+        # ts_predictor = TSPredictor(all_data)
+        print(tickets_df.head())  # Для проверки вывода данных
 
-
-@router.get("/api/sample_data")
-async def get_sample_data(
-    df_type: Annotated[DF_TYPE, "Тип данных (тикеты или иерархия)"],
-) -> DataFrameResponse:
-    try:
-        df = data_service.dataframes[df_type]
-        response_data = {
-            "columns": df.columns.tolist(),
-            "data": df.head(5).to_dict("records"),
-            "shape": df.shape,
-            "df_type": df_type,
-        }
-
-        return DataFrameResponse(**response_data)
-
+        return {"message": "Data updated successfully"}
     except KeyError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

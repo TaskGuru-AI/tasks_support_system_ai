@@ -70,6 +70,12 @@ class AverageLoadWeekdays(BaseModel):
     average_load: list[float]
 
 
+class AverageLoadWeekly(BaseModel):
+    queue_id: int
+    week: list[str]
+    average_load: list[float]
+
+
 class ForecastRequest(BaseModel):
     queue_id: int
     forecast_horizon: int
