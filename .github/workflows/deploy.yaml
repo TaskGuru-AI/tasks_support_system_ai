@@ -65,7 +65,7 @@ jobs:
             # поднимаем фронтенд
             docker compose up backend minio nginx -d --build
             docker compose exec backend poetry run minio-sync pull
-            docker compose up frontend nginx -d --build
+            docker compose up backend frontend nginx -d --build
 
             # Cleanup unused images
             docker image prune -f
