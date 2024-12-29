@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 import darts
 import darts.models
@@ -14,6 +14,21 @@ class TimeGranularity(str, Enum):
     MONTHLY = "monthly"
     QUARTERLY = "quarterly"
     YEARLY = "yearly"
+
+
+DF_TYPE = Literal["hierarchy", "tickets"]
+
+
+class DataFrameResponse(BaseModel):
+    columns: list[str]
+    data: list[dict[str, Any]]
+    shape: tuple[int, int]
+    df_type: DF_TYPE
+
+
+class ResponseBool(BaseModel):
+    status: bool
+    message: str = "success"
 
 
 class QueueStructure(BaseModel):
