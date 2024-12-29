@@ -20,7 +20,7 @@ if "data_available" not in st.session_state:
     st.session_state.data_available = False
 
 
-# @st.cache_data(ttl=600) # better to cache good result
+@st.cache_data(ttl=10)
 def check_data_availability():
     try:
         response = requests.get(f"{api_url}/api/data-status")
