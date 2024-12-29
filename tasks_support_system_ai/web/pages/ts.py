@@ -11,6 +11,7 @@ from tasks_support_system_ai.api.models.ts import ForecastRequest
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+EXPECTED_DATE_RANGE_LENGTH = 2
 
 st.title("Анализ нагрузки очередей")
 
@@ -150,17 +151,28 @@ def create_weekday_distribution():
     return fig
 
 
-def create_weekly_distribution():
-    weekly_response = requests.get(f"{api_url}/api/weekly_average/{selected_queue['id']}")
+def create_weekly_distribution(start_date=None, end_date=None):
+    params = {}
+    if start_date and end_date:
+        params["start_date"] = start_date
+        params["end_date"] = end_date
+        url = f"{api_url}/api/weekly_average/{selected_queue['id']}"
+        weekly_response = requests.get(url=url, params=params)
+    else:
+        weekly_response = requests.get(f"{api_url}/api/weekly_average/{selected_queue['id']}")
     response = weekly_response.json()
-
-    fig = go.Figure(data=[go.Bar(x=response["week"], y=response["average_load"])])
+    average_load = []
+    for load in response["average_load"]:
+        if load != 0:
+            average_load.append(load)
+    fig = go.Figure(data=[go.Bar(x=response["week"], y=average_load)])
     fig.update_layout(
         title="Average Weekly Load",
         xaxis_title="Week",
         yaxis_title="Average Number of Tickets",
     )
     return fig
+
 
 def create_subqueues_stack_plot(data):
     fig = px.area(
@@ -188,6 +200,12 @@ if queues:
         value=(datetime.now() - timedelta(days=30), datetime.now()),
         max_value=datetime.now(),
     )
+
+    # Извлечение начальной и конечной даты
+    if isinstance(date_range, tuple) and len(date_range) == EXPECTED_DATE_RANGE_LENGTH:
+        start_date, end_date = date_range
+    else:
+        start_date = end_date = date_range
 
     granularity = st.sidebar.selectbox(
         "Time Granularity", options=["Daily", "Weekly", "Monthly"], key="granularity"
@@ -228,9 +246,14 @@ if queues:
             # Weekday distribution (only for daily data)
             if granularity == "Daily":
                 st.plotly_chart(create_weekday_distribution())
-            
+
             if granularity == "Weekly":
-                st.plotly_chart(create_weekly_distribution())
+                if date_range:
+                    st.plotly_chart(
+                        create_weekly_distribution(start_date=start_date, end_date=end_date)
+                    )
+                else:
+                    st.plotly_chart(create_weekly_distribution())
 
             # if len(df) > 14:  # Minimum required for decomposition
             #     decomposition = seasonal_decompose(df["value"], period=7)

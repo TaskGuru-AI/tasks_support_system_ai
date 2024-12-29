@@ -1,9 +1,11 @@
 import asyncio
+import math
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+import pandas as pd
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 
 from tasks_support_system_ai.api.models.ts import (
     AverageLoadWeekdays,
@@ -71,15 +73,31 @@ async def get_daily_average(queue_id: int) -> AverageLoadWeekdays:
         queue_id=queue_id,
     )
 
+
 @router.get("/api/weekly_average/{queue_id}")
-async def get_weekly_average(queue_id: int) -> AverageLoadWeekly:
+async def get_weekly_average(
+    queue_id: int,
+    start_date: Annotated[datetime | None, Query(None)],
+    end_date: Annotated[datetime | None, Query(None)],
+) -> AverageLoadWeekly:
     df = all_data.get_df_slice(queue_id)
-    df['week_number'] = df["date"].dt.isocalendar().week
-    weeknames = [f"week {i}" for i in range(1, 53)]
-    week_avg = df.groupby('week_number')["new_tickets"].mean()
+    df["week_number"] = df["date"].dt.isocalendar().week
+    if start_date:
+        df = df[df["date"] >= start_date]
+    if end_date:
+        df = df[df["date"] <= end_date]
+    # Определяем первый понедельник в диапазоне (или ближайший предыдущий)
+    start_week = df["date"].min() - pd.to_timedelta(df["date"].min().weekday(), unit="d")
+    end_week = df["date"].max() + pd.to_timedelta(6 - df["date"].max().weekday(), unit="d")
+    # Рассчитываем количество недель
+    total_weeks = math.ceil((end_week - start_week).days / 7)
+    weeknames = [f"week {i+1}" for i in range(total_weeks)]
+    week_avg = df.groupby("week_number")["new_tickets"].mean()
+    average_load = [week_avg.get(i, 0) for i in range(1, 53)]
+
     return AverageLoadWeekly(
         week=weeknames,
-        average_load=week_avg.values,
+        average_load=average_load,
         queue_id=queue_id,
     )
 
