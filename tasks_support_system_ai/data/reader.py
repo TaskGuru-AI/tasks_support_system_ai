@@ -5,6 +5,7 @@ from pathlib import Path
 
 import darts
 import pandas as pd
+from contextlib import suppress
 
 from tasks_support_system_ai.api.models.ts import QueueStats, QueueStructure, TimeGranularity
 from tasks_support_system_ai.core.exceptions import DataNotFoundError
@@ -63,10 +64,8 @@ class TSDataManager:
                     df = ts_read_daily_tickets(df)
                 case "hierarchy":
                     df = read_proper_ts_tree(df)
-            try:
+            with suppress(Exception):
                 df = pd.read_csv(df)
-            except:
-                pass
         self.dataframes["type"] = df
 
 
