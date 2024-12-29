@@ -1,10 +1,8 @@
 import asyncio
-from ast import literal_eval
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from typing import Annotated
 
-import pandas as pd
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from tasks_support_system_ai.api.models.ts import (
