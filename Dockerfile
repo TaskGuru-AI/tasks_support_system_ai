@@ -4,7 +4,7 @@ ENV PIP_DEFAULT_TIMEOUT=100
 # install libgomp1
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libgomp1=12.2.0-14 \
-    && apt-get install -y curl=7.88.1-10+deb12u8 \
+    && apt-get install -y --no-install-recommends curl=7.88.1-10+deb12u8 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
