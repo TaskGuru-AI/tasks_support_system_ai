@@ -38,6 +38,37 @@ st.session_state.data_available = check_data_availability()
 st.write("Загрузите файлы CSV с данными о тикетах и иерархии.")
 
 
+def handle_reload():
+    try:
+        response = requests.get(f"{api_url}/api/reload_local_data")
+
+        if response.ok:
+            st.session_state.operation_status = {
+                "type": "success",
+                "message": "Data reloaded successfully!",
+                "result": response.json(),
+            }
+        else:
+            st.session_state.operation_status = {
+                "type": "error",
+                "message": f"Error: {response.status_code} - {response.text}",
+            }
+    except Exception as e:
+        st.session_state.operation_status = {
+            "type": "error",
+            "message": f"Failed to reload data: {str(e)}",
+        }
+
+
+def update_button():
+    if st.button("Reload Local Data"):
+        handle_reload()
+        st.rerun()
+
+
+update_button()
+
+
 def get_sample_data(df_type: str) -> str:
     """Get sample data from backend"""
     try:
@@ -50,7 +81,51 @@ def get_sample_data(df_type: str) -> str:
         return "queue_id,level,immediateDescendants,allDescendants\n1,1,'[2;3]','[2;3;4]'"
 
 
+def init_session_state():
+    if "operation_status" not in st.session_state:
+        st.session_state.operation_status = None
+    if "last_upload" not in st.session_state:
+        st.session_state.last_upload = None
+
+
+def handle_upload(df_type: str, file):
+    try:
+        file.seek(0)
+        files = {"file": file}
+        data = {"df_type": df_type}
+
+        with st.spinner(f"Uploading {df_type} data..."):
+            response = requests.post(url=f"{api_url}/api/upload_data", files=files, data=data)
+
+            if response.ok:
+                st.session_state.operation_status = {
+                    "type": "success",
+                    "message": f"{df_type.title()} data uploaded successfully!",
+                    "result": response.json() if response.content else None,
+                }
+                st.session_state.last_upload = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                st.session_state.operation_status = {
+                    "type": "error",
+                    "message": f"Upload failed: {response.json().get('detail', 'Unknown error')}",
+                }
+    except Exception as e:
+        st.session_state.operation_status = {
+            "type": "error",
+            "message": f"Error during upload: {str(e)}",
+        }
+
+
+def display_status():
+    if st.session_state.operation_status:
+        if st.session_state.operation_status["type"] == "success":
+            st.success(st.session_state.operation_status["message"])
+        else:
+            st.error(st.session_state.operation_status["message"])
+
+
 def upload_section():
+    init_session_state()
     st.header("Data Upload")
 
     left_col, right_col = st.columns(2)
@@ -65,7 +140,8 @@ def upload_section():
         )
 
         if tickets_file and st.button("Upload Tickets Data"):
-            upload_file("tickets", tickets_file)
+            handle_upload("tickets", tickets_file)
+            st.rerun()
 
     with right_col:
         st.subheader("Hierarchy Data Upload")
@@ -77,43 +153,15 @@ def upload_section():
         )
 
         if hierarchy_file and st.button("Upload Hierarchy Data"):
-            upload_file("hierarchy", hierarchy_file)
-    if st.button("Reload Local Data"):
-        try:
-            with st.spinner("Reloading data..."):
-                response = requests.get(f"{api_url}/api/reload_local_data")
+            handle_upload("hierarchy", hierarchy_file)
+            st.rerun()
 
-                if response.ok:
-                    st.success("Data reloaded successfully!")
-                    result = response.json()
-                    st.write(result)
-                    st.rerun()
-                else:
-                    st.error(f"Error: {response.status_code} - {response.text}")
-        except Exception as e:
-            st.error(f"Failed to reload data: {str(e)}")
+    display_status()
 
-
-# @st.cache_data(ttl=600)
-def upload_file(df_type: str, file):
-    try:
-        file.seek(0)
-
-        files = {"file": file}
-        data = {"df_type": df_type}
-
-        with st.spinner(f"Uploading {df_type} data..."):
-            response = requests.post(url=f"{api_url}/api/upload_data", files=files, data=data)
-
-            if response.ok:
-                st.success(f"{df_type.title()} data uploaded successfully!")
-                st.session_state.last_upload = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                st.rerun()
-            else:
-                st.error(f"Upload failed: {response.json().get('detail', 'Unknown error')}")
-
-    except Exception as e:
-        st.error(f"Error during upload: {str(e)}")
+    # не работает, и сообщение об успехе постоянно висит
+    # if st.session_state.operation_status:
+    #     time.sleep(2)  # Show message for 2 seconds
+    #     st.session_state.operation_status = None
 
 
 if not st.session_state.data_available:
@@ -134,8 +182,6 @@ if not st.session_state.data_available:
         3. Разместите их в локальном репозитории в папке `./data/`
         4. Установить just и запустите `just generate_data`
     """)
-    # TODO: add buttons to upload data (should be reused)
-    # add option to download data from miniO
     st.stop()
 
 

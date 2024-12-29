@@ -145,13 +145,11 @@ async def get_sample_data(
 ) -> DataFrameResponse:
     try:
         df = data_service.dataframes[df_type]
-        csv_string = df.head(5).to_csv(index=False)
         response_data = {
             "columns": df.columns.tolist(),
             "data": df.head(5).to_dict("records"),
             "shape": df.shape,
             "df_type": df_type,
-            "csv_sample": csv_string,
         }
 
         return DataFrameResponse(**response_data)

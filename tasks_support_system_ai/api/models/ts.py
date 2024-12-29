@@ -24,7 +24,6 @@ class DataFrameResponse(BaseModel):
     data: list[dict[str, Any]]
     shape: tuple[int, int]
     df_type: DF_TYPE
-    csv_sample: str | None = None
 
 
 class ResponseBool(BaseModel):
