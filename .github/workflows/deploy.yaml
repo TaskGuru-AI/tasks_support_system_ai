@@ -51,12 +51,7 @@ jobs:
             # Stop current services
             docker compose down || true
 
-            # Backup current env file if it exists
-            if [ -f .env ]; then
-              cp .env temp/.env
-            else
-              echo "${{ secrets.ENV_FILE }}" > temp/.env
-            fi
+            echo "${{ secrets.ENV_FILE }}" > temp/.env
 
             # Remove old files except volumes
             rm -rf $(ls -A | grep -v '^temp$' | grep -v 'volumes')
@@ -68,9 +63,9 @@ jobs:
             # сначала поднимаем backend, minio
             # скачиваем данные из minio
             # поднимаем фронтенд
-            docker compose up backend minio nginx -d
+            docker compose up backend minio nginx -d --build
             docker compose exec backend poetry run minio-sync pull
-            docker compose up frontend nginx -d
+            docker compose up frontend nginx -d --build
 
             # Cleanup unused images
             docker image prune -f
