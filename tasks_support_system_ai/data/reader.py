@@ -1,4 +1,5 @@
 import logging
+from contextlib import suppress
 from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
@@ -63,7 +64,8 @@ class TSDataManager:
                     df = ts_read_daily_tickets(df)
                 case "hierarchy":
                     df = read_proper_ts_tree(df)
-            df = pd.read_csv(df)
+            with suppress(Exception):
+                df = pd.read_csv(df)
         self.dataframes["type"] = df
 
 

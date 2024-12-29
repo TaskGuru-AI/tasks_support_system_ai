@@ -1,10 +1,8 @@
 import asyncio
-from ast import literal_eval
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from typing import Annotated
 
-import pandas as pd
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from tasks_support_system_ai.api.models.ts import (
@@ -102,19 +100,23 @@ async def upload_data(
 ):
     """Upload new data files"""
     try:
-        tickets_df = pd.read_csv(hierarchy_file.file)
-        hierarchy_df = pd.read_csv(
-            tickets_file.file,
-            converters={
-                "immediateDescendants": literal_eval,
-                "allDescendants": literal_eval,
-            },
-        )
-        tickets_df = pd.read_csv(tickets_file.file, sep=";")
-        tickets_df["date"] = pd.to_datetime(tickets_df["date"], format="%d.%m.%Y")
+        tickets_df = tickets_file
+        hierarchy_df = hierarchy_file
+        
+        # Печатаем названия столбцов для отладки
+        print("Columns in the file:", tickets_df.columns)
 
-        data_service.update_data(tickets_df, hierarchy_df)
+        data_service.update_data(tickets_df, "tickets")
+        data_service.update_data(hierarchy_df, "hierarchy")
+        
+        # tickets_data = TSTicketsData(data_service)
+        # hierarchy_data = TSHierarchyData(data_service)
+        # all_data = TSDataIntersection(tickets_data, hierarchy_data)
+        # ts_predictor = TSPredictor(all_data)
+        print(tickets_df.head())  # Для проверки вывода данных
 
         return {"message": "Data updated successfully"}
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"Missing expected column: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
