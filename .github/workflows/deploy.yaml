@@ -68,7 +68,7 @@ jobs:
             # сначала поднимаем backend, minio
             # скачиваем данные из minio
             # поднимаем фронтенд
-            docker compose up backend minio -d
+            docker compose up backend minio nginx -d
             docker compose exec backend poetry run minio-sync pull
             docker compose up frontend nginx -d
 
