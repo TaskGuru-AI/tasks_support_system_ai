@@ -1,12 +1,11 @@
 import logging
-
+import pandas as pd
 import numpy as np
 import streamlit as st
 
 from tasks_support_system_ai.web.tabs.nlp_overview import show_overview
 from tasks_support_system_ai.web.tabs.nlp_train import render_train_tab
 
-import pandas as pd
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
