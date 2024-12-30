@@ -28,7 +28,7 @@ import pandas as pd
 # def nlp_determine_input_selector():
 #     if nlp_input_selector == "Text":
 #         nlp_predict_input = nlp_predict_form.text_area(label="Text:",
-#                                                        help="Please provide text of the conversation")
+#                                                        help="Provide text")
 #     if nlp_input_selector == "CSV":
 #         nlp_predict_input = nlp_predict_form.file_uploader(label="CSV:",
 #                                                            type=["csv"])
@@ -46,31 +46,33 @@ def nlp_display_collected_params(*args):
 nlp_predict_model_selector = tab3.selectbox(label="Choose model:",
                                             placeholder="Choose model",
                                             options=["model_id_1", "model_id_2"],
-                                            index=None) # This should be the list of models generated previously
+                                            index=None) # This should be the list of models
 
 nlp_input_selector = tab3.radio(label="Text or CSV file:",
                                             options=["Text", "CSV"],
                                             index=0,
                                             horizontal=True)
 
-# Kept both text input and file selector as user may decide mid-action they need another type of input so that it doesn't get deleted
+# Kept both text input and file selector as user may decide mid-action they need them
 
 nlp_predict_input_text = tab3.text_area(label="Text:",
                                         help="Please provide text of the conversation")
 
 nlp_predict_input_file_uploader = tab3.file_uploader(label="CSV:",
                                                      type=["csv", "py"],
-                                                     help="Please provide a CSV file with conversations")
+                                                     help="Please provide a CSV file")
 
 nlp_predict_button = tab3.button(label=f"Predict from {nlp_input_selector}",
                                  type="primary",
-                                 on_click=nlp_display_collected_params, # This should trigger an API call and collect the model
-                                 args=(nlp_predict_model_selector, nlp_input_selector, nlp_predict_input_text))
+                                 on_click=nlp_display_collected_params, # This calls API
+args=(nlp_predict_model_selector, nlp_input_selector, nlp_predict_input_text))
 
 nlp_clear_form_button = tab3.button(label="Clear form",
                                     type="secondary")
 
-nlp_prediction_results = tab3.table(pd.DataFrame({"Text": ["Please buy this cream", "I want a new SIM card", "It doesn't work"],
+nlp_prediction_results = tab3.table(pd.DataFrame({"Text": ["Please buy this cream",
+                                                           "I want a new SIM card",
+                                                           "It doesn't work"],
                                                   "Cluster": ["Spam", "Request", "Tech work"]}))
 
 
