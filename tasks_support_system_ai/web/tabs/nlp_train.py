@@ -9,6 +9,7 @@ BACKEND_URL = "http://backend:8000/nlp"
 if os.getenv("IS_DOCKER", "0") == "0":
     BACKEND_URL = "http://localhost:8000/nlp"
 
+
 def select_model():
     st.title("Обучение модели NLP")
     model_type = st.sidebar.selectbox(
