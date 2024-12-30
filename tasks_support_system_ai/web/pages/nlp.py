@@ -6,6 +6,8 @@ import streamlit as st
 from tasks_support_system_ai.web.tabs.nlp_overview import show_overview
 from tasks_support_system_ai.web.tabs.nlp_train import render_train_tab
 
+import pandas as pd
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -22,7 +24,7 @@ with tab2:
 
 # TAB 3 SECTION - PREDICT
 
-import pandas as pd
+
 
 # NEEDED FUNCTIONS
 # def nlp_determine_input_selector():
