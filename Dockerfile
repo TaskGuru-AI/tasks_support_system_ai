@@ -1,16 +1,21 @@
 FROM python:3.12-slim AS base
 ENV PIP_DEFAULT_TIMEOUT=100
+
 # install libgomp1
-RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm -rf /var/lib/apt/lists/*
-RUN apt-get update && apt-get install -y curl
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgomp1=12.2.0-14 \
+    && apt-get install -y --no-install-recommends curl=7.88.1-10+deb12u8 \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 RUN mkdir -p /app/data && chmod -R 777 /app/data
 
-RUN pip install poetry
+RUN pip install --no-cache-dir poetry==1.8.5
 
 FROM base AS deps
-COPY pyproject.toml poetry.lock README.md .streamlit/ ./
+COPY pyproject.toml poetry.lock README.md ./
+COPY .streamlit ./.streamlit
+
 RUN set -e && \
     poetry config virtualenvs.create false \
     && poetry install --no-root --no-interaction --no-ansi

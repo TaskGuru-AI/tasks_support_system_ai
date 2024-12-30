@@ -1,15 +1,19 @@
 import asyncio
-from ast import literal_eval
+import math
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from typing import Annotated
 
 import pandas as pd
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 
+from tasks_support_system_ai.api.models.common import BaseResponse
 from tasks_support_system_ai.api.models.ts import (
+    AverageLoadWeekdays,
+    AverageLoadWeekly,
     ForecastRequest,
     QueueStats,
+    ResponseBool,
     TimeGranularity,
     TimeSeriesData,
 )
@@ -27,8 +31,7 @@ router = APIRouter()
 
 executor = ProcessPoolExecutor()
 data_service = TSDataManager()
-# make it resilient, do not fail if there is no data locally
-# remove duplication
+
 data_service.load_data()
 tickets_data = TSTicketsData(data_service)
 hierarchy_data = TSHierarchyData(data_service)
@@ -37,9 +40,14 @@ ts_predictor = TSPredictor(all_data)
 
 
 @router.get("/api/data-status")
-async def get_data_status():
+async def get_data_status() -> ResponseBool:
+    return ResponseBool(status=data_service.is_data_local())
+
+
+@router.get("/api/reload_local_data")
+async def reload_local_data() -> BaseResponse:
     data_service.load_data()
-    return {"has_data": data_service.is_data_local()}
+    return BaseResponse(status="data reloaded", message="success")
 
 
 @router.get("/api/queues")
@@ -50,12 +58,70 @@ async def get_queues():
 
 @router.get("/api/historical/{queue_id}")
 async def get_historical_ts(queue_id: int) -> TimeSeriesData:
-    data_queue = all_data.get_df_slice(queue_id).reset_index()
+    data_queue = all_data.get_df_slice(queue_id)
     timestamps = data_queue["date"].dt.strftime("%Y-%m-%d").tolist()
 
     return TimeSeriesData(
         timestamps=timestamps,
         values=data_queue["new_tickets"].tolist(),
+        queue_id=queue_id,
+    )
+
+
+@router.get("/api/daily_average/{queue_id}")
+async def get_daily_average(queue_id: int) -> AverageLoadWeekdays:
+    df = all_data.get_df_slice(queue_id)
+    weekday_avg = df.groupby(df["date"].dt.dayofweek)["new_tickets"].mean()
+    weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+    return AverageLoadWeekdays(
+        weekdays=weekday_names,
+        average_load=weekday_avg.values,
+        queue_id=queue_id,
+    )
+
+
+@router.get("/api/weekly_average/{queue_id}")
+async def get_weekly_average(
+    queue_id: int,
+    start_date: Annotated[datetime, Query(description="Начальная дата в формате YYYY-MM-DD")]
+    | None = None,
+    end_date: Annotated[datetime, Query(description="Конечная дата в формате YYYY-MM-DD")]
+    | None = None,
+) -> AverageLoadWeekly:
+    df = all_data.get_df_slice(queue_id)
+    df["week_number"] = df["date"].dt.isocalendar().week
+    min_date = df["date"].min()
+    max_date = df["date"].max()
+    if start_date and (start_date < min_date or start_date > max_date):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Start date {start_date} is out of range."
+            "Data available from {min_date} to {max_date}.",
+        )
+
+    if end_date and (end_date < min_date or end_date > max_date):
+        raise HTTPException(
+            status_code=400,
+            detail=f"End date {end_date} is out of range."
+            "Data available from {min_date} to {max_date}.",
+        )
+    if start_date:
+        df = df[df["date"] >= start_date]
+    if end_date:
+        df = df[df["date"] <= end_date]
+    # Определяем первый понедельник в диапазоне (или ближайший предыдущий)
+    start_week = df["date"].min() - pd.to_timedelta(df["date"].min().weekday(), unit="d")
+    end_week = df["date"].max() + pd.to_timedelta(6 - df["date"].max().weekday(), unit="d")
+    # Рассчитываем количество недель
+    total_weeks = math.ceil((end_week - start_week).days / 7)
+    weeknames = [f"week {i+1}" for i in range(total_weeks)]
+    week_avg = df.groupby("week_number")["new_tickets"].mean()
+    average_load = [week_avg.get(i, 0) for i in range(1, 53)]
+
+    return AverageLoadWeekly(
+        week=weeknames,
+        average_load=average_load,
         queue_id=queue_id,
     )
 
@@ -102,19 +168,23 @@ async def upload_data(
 ):
     """Upload new data files"""
     try:
-        tickets_df = pd.read_csv(hierarchy_file.file)
-        hierarchy_df = pd.read_csv(
-            tickets_file.file,
-            converters={
-                "immediateDescendants": literal_eval,
-                "allDescendants": literal_eval,
-            },
-        )
-        tickets_df = pd.read_csv(tickets_file.file, sep=";")
-        tickets_df["date"] = pd.to_datetime(tickets_df["date"], format="%d.%m.%Y")
+        tickets_df = tickets_file
+        hierarchy_df = hierarchy_file
 
-        data_service.update_data(tickets_df, hierarchy_df)
+        # Печатаем названия столбцов для отладки
+        print("Columns in the file:", tickets_df.columns)
+
+        data_service.update_data(tickets_df, "tickets")
+        data_service.update_data(hierarchy_df, "hierarchy")
+
+        # tickets_data = TSTicketsData(data_service)
+        # hierarchy_data = TSHierarchyData(data_service)
+        # all_data = TSDataIntersection(tickets_data, hierarchy_data)
+        # ts_predictor = TSPredictor(all_data)
+        print(tickets_df.head())  # Для проверки вывода данных
 
         return {"message": "Data updated successfully"}
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -6,7 +6,11 @@ from pathlib import Path
 import darts
 import pandas as pd
 
-from tasks_support_system_ai.api.models.ts import QueueStats, QueueStructure, TimeGranularity
+from tasks_support_system_ai.api.models.ts import (
+    QueueStats,
+    QueueStructure,
+    TimeGranularity,
+)
 from tasks_support_system_ai.core.exceptions import DataNotFoundError
 from tasks_support_system_ai.data.parse_data import read_proper_ts_tree, ts_read_daily_tickets
 from tasks_support_system_ai.utils.utils import get_correct_data_path
@@ -63,8 +67,9 @@ class TSDataManager:
                     df = ts_read_daily_tickets(df)
                 case "hierarchy":
                     df = read_proper_ts_tree(df)
+        else:
             df = pd.read_csv(df)
-        self.dataframes["type"] = df
+        self.dataframes[type] = df
 
 
 class TSTicketsData:
@@ -135,10 +140,15 @@ class TSDataIntersection:
 
     def get_top_queues(self, top_n=10) -> dict:
         tree = self.hierarchy.df
+        tickets = self.tickets.df
+        tree["full_load"] = tree.apply(
+            lambda row: tickets[tickets["queueId"].isin(row["allDescendants"])][
+                "new_tickets"
+            ].sum(),
+            axis=1,
+        )
         queue_ids = (
-            tree[
-                (tree["level"] == 1) & (tree["full_load"] != 0)
-            ]  # full_load - заплатка, инфа из ts_daily. TODO: считать на лету
+            tree[(tree["level"] == 1) & (tree["full_load"] != 0)]
             .sort_values("full_load", ascending=False)["queueId"]
             .head(top_n)
             .values.tolist()
