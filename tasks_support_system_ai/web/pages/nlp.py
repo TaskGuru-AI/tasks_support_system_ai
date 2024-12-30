@@ -1,7 +1,7 @@
 import logging
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import streamlit as st
 
 from tasks_support_system_ai.web.tabs.nlp_overview import show_overview
