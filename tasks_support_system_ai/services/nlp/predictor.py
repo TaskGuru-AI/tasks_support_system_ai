@@ -56,7 +56,7 @@ class NLPPredictor:
         model_service.remove_model(model_id)
 
 
-def train_logistic_model(train: pd.DataFrame, test: pd.DataFrame, config: LogisticConfig) -> str:
+def train_logistic_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMConfig) -> str:
     """
     Method to train a Logistic Regression model
     :param config: Model configuration
@@ -87,7 +87,7 @@ def train_logistic_model(train: pd.DataFrame, test: pd.DataFrame, config: Logist
     return model_id
 
 
-def train_svm_model(train: pd.DataFrame, test: pd.DataFrame, config: LogisticConfig) -> str:
+def train_svm_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMConfig) -> str:
     """ "
     Method to train an SVM model
     :param config: Model configuration
@@ -98,7 +98,12 @@ def train_svm_model(train: pd.DataFrame, test: pd.DataFrame, config: LogisticCon
     X_test, y_test = test["vector"], test["cluster"]
     X_test = vector_transform(X_test)
 
-    model = SVC(C=config.C, kernel=config.kernel, class_weight=config.class_weight)
+    model = SVC(
+        C=config.C,
+        kernel=config.kernel,
+        class_weight=config.class_weight,
+        decision_function_shape="ovr",
+    )
     model.fit(X_train, y_train)
 
     model_id = str(uuid.uuid4())
