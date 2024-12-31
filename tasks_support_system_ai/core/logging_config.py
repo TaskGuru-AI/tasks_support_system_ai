@@ -47,7 +47,7 @@ def get_logging_config(
     log_level: str = "INFO",
 ) -> dict:
     log_dir = settings.logs_path
-    log_dir.mkdir(exist_ok=True)
+    log_dir.mkdir(exist_ok=True, mode=0o777)
 
     return {
         "version": 1,
