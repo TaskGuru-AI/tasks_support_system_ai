@@ -1,6 +1,11 @@
 services:
   backend:
-    build: .
+    build:
+      context: .
+      args:
+        - USER_ID=1001
+        - GROUP_ID=1001
+    user: "1001:1001"
     command: poetry run uvicorn tasks_support_system_ai.main:app --host 0.0.0.0 --port 8000
     ports:
       - "127.0.0.1:8000:8000"
@@ -21,7 +26,12 @@ services:
       start_period: 1s
 
   frontend:
-    build: .
+    build:
+      context: .
+      args:
+        - USER_ID=1001
+        - GROUP_ID=1001
+    user: "1001:1001"
     command: poetry run streamlit run tasks_support_system_ai/web/app.py --server.port 8501 --server.address 0.0.0.0
     ports:
       - "127.0.0.1:8501:8501"
