@@ -1,13 +1,10 @@
-import os
-
 import plotly.graph_objects as go
 import requests
 import streamlit as st
 
-BACKEND_URL = "http://backend:8000/nlp"
+from tasks_support_system_ai.core.config import settings
 
-if os.getenv("IS_DOCKER", "0") == "0":
-    BACKEND_URL = "http://localhost:8000/nlp"
+backend_url = "http://backend:8000/nlp" if settings.is_docker else "http://localhost:8000/nlp"
 
 
 def select_model():
@@ -54,7 +51,7 @@ def train_model(model, config):
         with st.spinner("Обучение модели..."):
             try:
                 response = requests.post(
-                    f"{BACKEND_URL}/api/fit_nlp",
+                    f"{backend_url}/api/fit_nlp",
                     json={"model": model, "config": config},
                 )
                 model_id = response.json()
@@ -93,7 +90,7 @@ def show_statistics():
         if model_id:
             if model_id not in st.session_state.statistics:
                 try:
-                    response = requests.get(f"{BACKEND_URL}/api/statistics/{model_id}")
+                    response = requests.get(f"{backend_url}/api/statistics/{model_id}")
                     st.session_state.statistics[model_id] = response.json()
                 except requests.exceptions.RequestException as e:
                     st.error(f"Ошибка при соединении с сервером: {e}")
@@ -175,7 +172,7 @@ def remove_model():
         if st.button("Remove Model"):
             with st.spinner("Removing model..."):
                 try:
-                    requests.delete(f"{BACKEND_URL}/api/remove_nlp/{model_id}")
+                    requests.delete(f"{backend_url}/api/remove_nlp/{model_id}")
                     st.session_state.model_ids.remove(model_id)
                     del st.session_state.model_configs[model_id]
                     if model_id in st.session_state.statistics:

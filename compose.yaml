@@ -30,7 +30,6 @@ services:
       - ./logs:/app/logs
     environment:
       - LOG_LEVEL=INFO
-      - IS_DOCKER=1
     networks:
       - app-network
     healthcheck:
