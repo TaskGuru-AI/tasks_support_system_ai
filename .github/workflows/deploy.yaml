@@ -58,8 +58,8 @@ jobs:
             echo ${{ secrets.SERVER_PASSWORD }} | sudo -S rm -rf $(ls -A | grep -v '^temp$' | grep -v 'volumes')
 
             # Move new files from temp
-            mv temp/* temp/.[!.]* .
-            rm -rf temp
+            sudo mv temp/* temp/.[!.]* .
+            sudo rm -rf temp
 
             # сначала поднимаем backend, minio
             # скачиваем данные из minio
