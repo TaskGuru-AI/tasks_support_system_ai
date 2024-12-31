@@ -1,14 +1,11 @@
-import logging
 from enum import Enum
 from pathlib import Path
 
 import pandas as pd
 
 from tasks_support_system_ai.core.exceptions import DataNotFoundError
+from tasks_support_system_ai.core.logger import backend_logger as logger  # noqa: F401
 from tasks_support_system_ai.utils.utils import get_correct_data_path
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class DataFrames(Enum):

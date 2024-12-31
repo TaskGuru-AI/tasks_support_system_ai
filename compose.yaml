@@ -6,6 +6,9 @@ services:
       - "127.0.0.1:8000:8000"
     volumes:
       - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - LOG_LEVEL=INFO
     env_file:
       - ./.env
     networks:
@@ -24,8 +27,10 @@ services:
       - "127.0.0.1:8501:8501"
     volumes:
       - ./data:/app/data
+      - ./logs:/app/logs
     environment:
-      IS_DOCKER: 1
+      - LOG_LEVEL=INFO
+      - IS_DOCKER=1
     networks:
       - app-network
     healthcheck:
@@ -79,6 +84,7 @@ volumes:
       type: none
       o: bind
       device: /opt/app/volumes/minio
+  logs:
 
 networks:
   app-network:

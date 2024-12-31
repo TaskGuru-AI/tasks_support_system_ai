@@ -1,8 +1,9 @@
 import json
 import logging.config
 import traceback
-from pathlib import Path
 from typing import Literal
+
+from tasks_support_system_ai.core.config import settings
 
 
 class JSONFormatter(logging.Formatter):
@@ -45,7 +46,7 @@ def get_logging_config(
     app_name: Literal["fastapi", "streamlit", "backend"],
     log_level: str = "INFO",
 ) -> dict:
-    log_dir = Path("./logs")
+    log_dir = settings.logs_path
     log_dir.mkdir(exist_ok=True)
 
     return {

@@ -1,4 +1,3 @@
-import logging
 import uuid
 
 import pandas as pd
@@ -10,12 +9,10 @@ from sklearn.svm import SVC
 # from imblearn.over_sampling import RandomOverSampler
 # from imblearn.under_sampling import RandomUnderSampler
 from tasks_support_system_ai.api.models.nlp import LogisticConfig, SVMConfig
+from tasks_support_system_ai.core.logger import backend_logger as logger  # noqa: F401
 from tasks_support_system_ai.data.nlp.reader import NLPTicketsData
 from tasks_support_system_ai.services.nlp.model_service import ModelService
 from tasks_support_system_ai.utils.nlp import vector_transform
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 model_service = ModelService()
 

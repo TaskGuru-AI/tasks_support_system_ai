@@ -1,4 +1,3 @@
-import logging
 from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
@@ -12,11 +11,9 @@ from tasks_support_system_ai.api.models.ts import (
     TimeGranularity,
 )
 from tasks_support_system_ai.core.exceptions import DataNotFoundError
+from tasks_support_system_ai.core.logger import backend_logger as logger
 from tasks_support_system_ai.data.parse_data import read_proper_ts_tree, ts_read_daily_tickets
 from tasks_support_system_ai.utils.utils import get_correct_data_path
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class DataFrames(Enum):
@@ -29,6 +26,7 @@ class DataFrames(Enum):
 def read_data(data: DataFrames) -> pd.DataFrame:
     """Get dataframe from Enum."""
     data_path = get_correct_data_path(data.value)
+    logger.info(f"Read {data_path}")
     if not Path.exists(data_path):
         raise DataNotFoundError(f"No data at path: {data_path}")
     match data:
