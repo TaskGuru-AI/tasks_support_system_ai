@@ -55,7 +55,7 @@ jobs:
             echo "${{ secrets.ENV_FILE }}" > temp/.env
 
             # Remove old files except volumes
-            rm -rf $(ls -A | grep -v '^temp$' | grep -v 'volumes')
+            echo ${{ secrets.SERVER_PASSWORD }} | sudo -S rm -rf $(ls -A | grep -v '^temp$' | grep -v 'volumes')
 
             # Move new files from temp
             mv temp/* temp/.[!.]* .
