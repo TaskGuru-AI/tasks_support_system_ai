@@ -1,4 +1,3 @@
-import logging
 import os
 from datetime import datetime, timedelta
 
@@ -8,9 +7,8 @@ import requests
 import streamlit as st
 
 from tasks_support_system_ai.api.models.ts import ForecastRequest
+from tasks_support_system_ai.core.logger import streamlit_logger as logger
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 EXPECTED_DATE_RANGE_LENGTH = 2
 
 st.title("Анализ нагрузки очередей")
@@ -30,6 +28,7 @@ def check_data_availability():
         response = requests.get(f"{api_url}/api/data-status")
         return response.json()["status"]
     except requests.exceptions.RequestException:
+        logger.error("Data is not available")
         return False
 
 
@@ -55,6 +54,7 @@ def handle_reload():
                 "message": f"Error: {response.status_code} - {response.text}",
             }
     except Exception as e:
+        logger.error({"error": str(e)})
         st.session_state.operation_status = {
             "type": "error",
             "message": f"Failed to reload data: {str(e)}",
