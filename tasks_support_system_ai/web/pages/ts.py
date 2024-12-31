@@ -1,5 +1,3 @@
-import logging
-import os
 from datetime import datetime, timedelta
 
 import plotly.express as px
@@ -8,17 +6,14 @@ import requests
 import streamlit as st
 
 from tasks_support_system_ai.api.models.ts import ForecastRequest
+from tasks_support_system_ai.core.config import settings
+from tasks_support_system_ai.core.logger import streamlit_logger as logger
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 EXPECTED_DATE_RANGE_LENGTH = 2
 
 st.title("Анализ нагрузки очередей")
 
-if os.getenv("IS_DOCKER", "0") == "0":
-    api_url = "http://localhost:8000/ts"
-else:
-    api_url = "http://backend:8000/ts"
+api_url = "http://backend:8000/ts" if settings.is_docker else "http://localhost:8000/ts"
 
 if "data_available" not in st.session_state:
     st.session_state.data_available = False
@@ -30,6 +25,7 @@ def check_data_availability():
         response = requests.get(f"{api_url}/api/data-status")
         return response.json()["status"]
     except requests.exceptions.RequestException:
+        logger.error("Data is not available")
         return False
 
 
@@ -55,6 +51,7 @@ def handle_reload():
                 "message": f"Error: {response.status_code} - {response.text}",
             }
     except Exception as e:
+        logger.error({"error": str(e)})
         st.session_state.operation_status = {
             "type": "error",
             "message": f"Failed to reload data: {str(e)}",
@@ -424,8 +421,10 @@ if queues:
             st.plotly_chart(fig, use_container_width=True)
 
         except requests.exceptions.RequestException as e:
+            logger.error(e)
             st.error(f"Error fetching data: {str(e)}")
 else:
+    logger.error("No queues available")
     st.error("No queues available")
 
 with st.expander("About this dashboard"):

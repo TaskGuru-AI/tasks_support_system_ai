@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -11,10 +10,8 @@ from darts.models import ExponentialSmoothing, LinearRegressionModel
 
 from tasks_support_system_ai.api.models.ts import ModelConfig, ModelInfo
 from tasks_support_system_ai.core.config import settings
+from tasks_support_system_ai.core.logger import backend_logger as logger
 from tasks_support_system_ai.data.reader import DataConversion, TSDataIntersection
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class TSPredictor:
