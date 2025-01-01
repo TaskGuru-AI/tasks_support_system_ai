@@ -48,7 +48,7 @@ async def get_data_status() -> ResponseBool:
     return ResponseBool(status=data_service.is_data_local())
 
 
-@router.get("/api/reload_local_data")
+@router.post("/api/reload_local_data")
 async def reload_local_data() -> BaseResponse:
     data_service.load_data()
     return BaseResponse(status="data reloaded", message="success")

@@ -101,7 +101,7 @@ st.session_state.data_available = check_data_availability()
 
 def handle_reload():
     try:
-        response = requests.get(f"{api_url}/api/reload_local_data")
+        response = requests.post(f"{api_url}/api/reload_local_data")
 
         if response.ok:
             st.session_state.operation_status = {

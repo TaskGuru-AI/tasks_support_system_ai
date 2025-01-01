@@ -15,10 +15,10 @@ services:
       - app-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
+      interval: 5s
+      timeout: 3s
       retries: 10
-      start_period: 1s
+      start_period: 2s
 
   frontend:
     build: .
