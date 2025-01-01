@@ -44,15 +44,41 @@ class QueueLoad(BaseModel):
     ticket_count: int
 
 
+class QueueStructureStats(BaseModel):
+    level: int
+    direct_children: int
+    all_descendants: int
+    leaf_nodes: int
+    depth: int
+    parent_id: int | None
+
+
+class LoadStats(BaseModel):
+    total_tickets: int
+    avg_tickets: float
+    peak_load: int
+    min_load: int
+    median_load: float
+    std_dev: float
+    percentile_90: float
+    percentile_95: float
+
+
+class TimeStats(BaseModel):
+    busiest_day: datetime
+    quietest_day: datetime
+    weekend_avg: float
+    weekday_avg: float
+
+
 class QueueStats(BaseModel):
     queue_id: int
     start_date: datetime
     end_date: datetime
     granularity: TimeGranularity
-    total_tickets: int
-    avg_daily_tickets: float
-    peak_load: int
-    min_load: int
+    structure: QueueStructureStats
+    load: LoadStats
+    time: TimeStats
 
 
 class TimeSeriesData(BaseModel):
