@@ -6,9 +6,12 @@ import darts
 import pandas as pd
 
 from tasks_support_system_ai.api.models.ts import (
+    LoadStats,
     QueueStats,
     QueueStructure,
+    QueueStructureStats,
     TimeGranularity,
+    TimeStats,
 )
 from tasks_support_system_ai.core.exceptions import DataNotFoundError
 from tasks_support_system_ai.core.logger import backend_logger as logger
@@ -133,33 +136,40 @@ class TSDataIntersection:
             df = self.get_df_slice(queue_id, date_start, date_end)
         else:
             df = self.tickets.df.groupby("date")[["new_tickets"]].sum().reset_index()
-        # df = df[df["date"].between(str(date_start), str(date_end))]
         return df
 
-    def get_top_queues(self, top_n=10) -> dict:
+    def get_all_levels_queues(self, top_n=20) -> dict:
         tree = self.hierarchy.df
         tickets = self.tickets.df
+
         tree["full_load"] = tree.apply(
             lambda row: tickets[tickets["queueId"].isin(row["allDescendants"])][
                 "new_tickets"
             ].sum(),
             axis=1,
         )
-        queue_ids = (
-            tree[(tree["level"] == 1) & (tree["full_load"] != 0)]
-            .sort_values("full_load", ascending=False)["queueId"]
-            .head(top_n)
-            .values.tolist()
-        )
-        return {
-            "queues": [
+
+        levels_stats = {}
+        for level in range(1, 7):
+            level_queues = (
+                tree[(tree["level"] == level) & (tree["full_load"] != 0)]
+                .sort_values("full_load", ascending=False)
+                .head(top_n)
+            )
+
+            levels_stats[level] = [
                 {
-                    "id": int(queue_id),
-                    "name": f"Queue {queue_id}",
-                    "load": int(tree[tree["queueId"] == queue_id]["full_load"].iloc[0]),
+                    "id": int(row["queueId"]),
+                    "name": f"Queue {row['queueId']}",
+                    "load": int(row["full_load"]),
+                    "level": int(row["level"]),
                 }
-                for queue_id in queue_ids
+                for _, row in level_queues.iterrows()
             ]
+
+        return {
+            "queues_by_level": levels_stats,
+            "total_load": int(tree["full_load"].sum()),
         }
 
     def get_df_slice(
@@ -171,10 +181,14 @@ class TSDataIntersection:
     ) -> pd.DataFrame:
         tree = self.hierarchy.df
         df = self.tickets.df
-        queues = tree[tree["queueId"] == queue_id]["allDescendants"].values[0]
-        df_slice = (
-            df[df["queueId"].isin(queues)].groupby("date")[["new_tickets"]].sum().reset_index()
-        )
+        if queue_id != 0:
+            queues = tree[tree["queueId"] == queue_id]["allDescendants"].values[0]
+            df_slice = (
+                df[df["queueId"].isin(queues)].groupby("date")[["new_tickets"]].sum().reset_index()
+            )
+        else:
+            df_slice = df.groupby("date")[["new_tickets"]].sum().reset_index()
+
         if date_start and date_end:
             df_slice = df_slice[df_slice["date"].between(str(date_start), str(date_end))]
         if granularity:
@@ -188,26 +202,94 @@ class TSDataIntersection:
         end_date: datetime,
         granularity: TimeGranularity,
     ) -> QueueStats:
-        _, all_descendants = self.hierarchy.get_descendants(queue_id)
-        tickets_df = self.tickets.df
+        direct_children, all_descendants = self.hierarchy.get_descendants(queue_id)
+        tree_df = self.hierarchy.df
+        queue_node = tree_df[tree_df["queueId"] == queue_id].iloc[0]
 
+        structure_stats = QueueStructureStats(
+            level=int(queue_node["level"]),
+            direct_children=len(direct_children),
+            all_descendants=len(all_descendants),
+            leaf_nodes=len([q for q in all_descendants if q not in direct_children]),
+            depth=int(tree_df[tree_df["queueId"].isin(all_descendants)]["level"].max())
+            - int(queue_node["level"]),
+            parent_id=None,
+        )
+
+        tickets_df = self.tickets.df
         df_slice = tickets_df[
             (tickets_df["queueId"].isin(all_descendants))
             & (tickets_df["date"] >= start_date)
             & (tickets_df["date"] <= end_date)
         ]
 
-        grouped_data = self.tickets.resample_data(df_slice, granularity)
+        # Group by date and calculate daily aggregates
+        daily_data = df_slice.groupby("date")["new_tickets"].sum()
+
+        # Calculate basic statistics
+        total_tickets = int(daily_data.sum())
+        avg_tickets = float(daily_data.mean())
+        peak_load = int(daily_data.max())
+        min_load = int(daily_data.min())
+        median_load = float(daily_data.median())
+        std_dev = float(daily_data.std())
+        percentile_90 = float(daily_data.quantile(0.9))
+        percentile_95 = float(daily_data.quantile(0.95))
+
+        # Calculate growth rate
+        first_week = daily_data.head(7).mean()
+        last_week = daily_data.tail(7).mean()
+        growth_rate = ((last_week - first_week) / first_week) * 100 if first_week > 0 else 0
+
+        load_stats = LoadStats(
+            total_tickets=total_tickets,
+            avg_tickets=avg_tickets,
+            peak_load=peak_load,
+            min_load=min_load,
+            median_load=median_load,
+            std_dev=std_dev,
+            percentile_90=percentile_90,
+            percentile_95=percentile_95,
+            growth_rate=float(growth_rate),
+        )
+
+        # Time-based analysis
+        df_slice.loc[:, "hour"] = df_slice["date"].dt.hour
+        df_slice.loc[:, "is_weekend"] = df_slice["date"].dt.weekday.isin([5, 6])
+
+        # Hourly aggregation
+        hourly_data = df_slice.groupby(["date", "hour"])["new_tickets"].sum().reset_index()
+        hourly_avg = hourly_data.groupby("hour")["new_tickets"].mean()
+
+        # Daily aggregation for busiest/quietest days
+        daily_tickets = df_slice.groupby("date")["new_tickets"].sum()
+        busiest_day = daily_tickets.idxmax()
+        quietest_day = daily_tickets.idxmin()
+
+        # Weekend vs weekday analysis
+        weekend_avg = float(
+            df_slice[df_slice["is_weekend"]].groupby("date")["new_tickets"].sum().mean()
+        )
+        weekday_avg = float(
+            df_slice[~df_slice["is_weekend"]].groupby("date")["new_tickets"].sum().mean()
+        )
+
+        time_stats = TimeStats(
+            busiest_day=busiest_day,
+            quietest_day=quietest_day,
+            weekend_avg=weekend_avg,
+            weekday_avg=weekday_avg,
+        )
 
         return QueueStats(
             queue_id=queue_id,
+            queue_name=f"Queue {queue_id}",
             start_date=start_date,
             end_date=end_date,
             granularity=granularity,
-            total_tickets=int(grouped_data["new_tickets"]["sum"]),
-            avg_tickets=float(grouped_data["new_tickets"]["mean"]),
-            peak_load=int(grouped_data["new_tickets"]["max"]),
-            min_load=int(grouped_data["new_tickets"]["min"]),
+            structure=structure_stats,
+            load=load_stats,
+            time=time_stats,
         )
 
 

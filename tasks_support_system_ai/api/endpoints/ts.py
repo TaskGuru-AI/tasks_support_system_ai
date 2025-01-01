@@ -20,6 +20,7 @@ from tasks_support_system_ai.api.models.ts import (
     TimeGranularity,
     TimeSeriesData,
 )
+from tasks_support_system_ai.core.logger import fastapi_logger as logger
 from tasks_support_system_ai.data.reader import (
     TSDataIntersection,
     TSDataManager,
@@ -55,18 +56,18 @@ async def reload_local_data() -> BaseResponse:
 
 @router.get("/api/queues")
 async def get_queues():
-    # топ 10 очередей
-    return all_data.get_top_queues()
+    """Return queues statistics for all levels at once"""
+    return all_data.get_all_levels_queues()
 
 
-@router.get("/api/historical/{queue_id}")
+@router.get("/api/historical")
 async def get_historical_ts(
-    queue_id: int,
-    granularity: TimeGranularity = Query(
-        default=TimeGranularity.DAILY, description="Time granularity"
-    ),
-    start_date: str | None = None,
-    end_date: str | None = None,
+    queue_id: Annotated[int, "id очереди"],
+    granularity: Annotated[
+        TimeGranularity, Query(description="Time granularity")
+    ] = TimeGranularity.DAILY,
+    start_date: Annotated[str | None, Query(description="Start date in YYYY-MM-DD format")] = None,
+    end_date: Annotated[str | None, Query(description="End date in YYYY-MM-DD format")] = None,
 ) -> TimeSeriesData:
     data_queue = all_data.get_df_slice(queue_id, start_date, end_date, granularity)
     timestamps = data_queue["date"].dt.strftime("%Y-%m-%d").tolist()
@@ -78,9 +79,13 @@ async def get_historical_ts(
     )
 
 
-@router.get("/api/daily_average/{queue_id}")
-async def get_daily_average(queue_id: int) -> AverageLoadWeekdays:
-    df = all_data.get_df_slice(queue_id)
+@router.get("/api/daily_average")
+async def get_daily_average(
+    queue_id: Annotated[int, "id очереди"],
+    date_start: Annotated[str, "Дата начала"],
+    date_end: Annotated[str, "Дата окончания"],
+) -> AverageLoadWeekdays:
+    df = all_data.get_df_slice(queue_id, date_start, date_end)
     weekday_avg = df.groupby(df["date"].dt.dayofweek)["new_tickets"].mean()
     weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
@@ -99,7 +104,7 @@ async def get_weekly_average(
     end_date: Annotated[datetime, Query(description="Конечная дата в формате YYYY-MM-DD")]
     | None = None,
 ) -> AverageLoadWeekly:
-    df = all_data.get_df_slice(queue_id)
+    df = all_data.get_df_slice(queue_id, start_date, end_date)
     df["week_number"] = df["date"].dt.isocalendar().week
     min_date = df["date"].min()
     max_date = df["date"].max()
@@ -144,10 +149,14 @@ async def get_queue_stats(
     granularity: Annotated[TimeGranularity, "Time granularity"] = TimeGranularity.DAILY,
 ):
     try:
-        return ts_predictor.get_queue_stats(
-            queue_id=queue_id, start_date=start_date, end_date=end_date, granularity=granularity
+        return all_data.get_queue_stats(
+            queue_id=queue_id,
+            start_date=start_date,
+            end_date=end_date,
+            granularity=granularity,
         )
     except Exception as e:
+        logger.error(e, exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
