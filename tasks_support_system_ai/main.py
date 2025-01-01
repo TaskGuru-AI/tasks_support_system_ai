@@ -10,10 +10,14 @@ from tasks_support_system_ai.core.logging_config import get_logging_config
 
 logging.config.dictConfig(get_logging_config("fastapi"))
 logger = logging.getLogger("fastapi")
-app = FastAPI()
 
-
-app = FastAPI(title="Анализ обращений")
+app = FastAPI(
+    title="Анализ обращений",
+    root_path="/api",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+)
 
 app.include_router(health.router, tags=["health"])
 app.include_router(ts.router, prefix="/ts", tags=["time-series"])
