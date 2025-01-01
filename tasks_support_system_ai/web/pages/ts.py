@@ -344,7 +344,7 @@ def display_queue_stats(queue_stats: QueueStats):
     struct_col1, struct_col2, struct_col3 = st.columns(3)
     with struct_col1:
         st.metric("Уровень", queue_stats.structure.level)
-        st.metric("Direct Children", queue_stats.structure.direct_children)
+        st.metric("Прямые наследники", queue_stats.structure.direct_children)
     with struct_col2:
         st.metric("Все наследники", queue_stats.structure.all_descendants)
         st.metric("Непрямые наследники", queue_stats.structure.leaf_nodes)
