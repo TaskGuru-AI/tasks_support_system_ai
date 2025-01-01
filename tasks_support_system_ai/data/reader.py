@@ -138,7 +138,7 @@ class TSDataIntersection:
             df = self.tickets.df.groupby("date")[["new_tickets"]].sum().reset_index()
         return df
 
-    def get_all_levels_queues(self, top_n=20) -> dict:
+    def get_all_levels_queues(self, top_n=30) -> dict:
         tree = self.hierarchy.df
         tickets = self.tickets.df
 
