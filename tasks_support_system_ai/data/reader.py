@@ -257,10 +257,6 @@ class TSDataIntersection:
         df_slice.loc[:, "hour"] = df_slice["date"].dt.hour
         df_slice.loc[:, "is_weekend"] = df_slice["date"].dt.weekday.isin([5, 6])
 
-        # Hourly aggregation
-        hourly_data = df_slice.groupby(["date", "hour"])["new_tickets"].sum().reset_index()
-        hourly_avg = hourly_data.groupby("hour")["new_tickets"].mean()
-
         # Daily aggregation for busiest/quietest days
         daily_tickets = df_slice.groupby("date")["new_tickets"].sum()
         busiest_day = daily_tickets.idxmax()
