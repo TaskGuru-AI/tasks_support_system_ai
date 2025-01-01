@@ -252,10 +252,9 @@ class TSDataIntersection:
             percentile_95=percentile_95,
             growth_rate=float(growth_rate),
         )
-
+        pd.options.mode.chained_assignment = None
         # Time-based analysis
-        df_slice.loc[:, "hour"] = df_slice["date"].dt.hour
-        df_slice.loc[:, "is_weekend"] = df_slice["date"].dt.weekday.isin([5, 6])
+        df_slice["is_weekend"] = df_slice["date"].dt.weekday.isin([5, 6])
 
         # Daily aggregation for busiest/quietest days
         daily_tickets = df_slice.groupby("date")["new_tickets"].sum()
