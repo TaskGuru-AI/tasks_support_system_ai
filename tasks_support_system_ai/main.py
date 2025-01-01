@@ -5,8 +5,8 @@ from fastapi import FastAPI
 
 from tasks_support_system_ai.api.endpoints import health, nlp, ts
 from tasks_support_system_ai.core.config import settings
-from tasks_support_system_ai.core.logging import RouterLoggingMiddleware
 from tasks_support_system_ai.core.logging_config import get_logging_config
+from tasks_support_system_ai.core.logging_fastapi import RouterLoggingMiddleware
 
 logging.config.dictConfig(get_logging_config("fastapi"))
 logger = logging.getLogger("fastapi")
