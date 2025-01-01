@@ -5,13 +5,21 @@ import plotly.graph_objects as go
 import requests
 import streamlit as st
 
-from tasks_support_system_ai.api.models.ts import ForecastRequest
+from tasks_support_system_ai.api.models.ts import ForecastRequest, TimeGranularity
 from tasks_support_system_ai.core.config import settings
 from tasks_support_system_ai.core.logger import streamlit_logger as logger
 
-EXPECTED_DATE_RANGE_LENGTH = 2
-
 st.title("Анализ нагрузки очередей")
+st.write("""
+**TS часть проекта анализа задач службы техподдержки**
+
+Сервис оперирует двумя датасетами:
+- Дневная нагрузка на очереди
+- Структура очередей (иерархическая)
+
+Цели сервиса:
+- Прогнозировать нагрузку на очереди в будущем
+""")
 
 api_url = "http://backend:8000/ts" if settings.is_docker else "http://localhost:8000/ts"
 
@@ -29,10 +37,17 @@ def check_data_availability():
         return False
 
 
+@st.cache_data(ttl=600)
+def fetch_queues():
+    try:
+        response = requests.get(f"{api_url}/api/queues")
+        return response.json()["queues"]
+    except requests.exceptions.RequestException as e:
+        st.error(f"Error fetching queues: {str(e)}")
+        return []
+
+
 st.session_state.data_available = check_data_availability()
-
-
-st.write("Загрузите файлы CSV с данными о тикетах и иерархии.")
 
 
 def handle_reload():
@@ -45,6 +60,7 @@ def handle_reload():
                 "message": "Data reloaded successfully!",
                 "result": response.json(),
             }
+            fetch_queues.clear()
         else:
             st.session_state.operation_status = {
                 "type": "error",
@@ -59,9 +75,8 @@ def handle_reload():
 
 
 def update_button():
-    if st.button("Reload Local Data"):
+    if st.button("Восстановить данные по умолчанию"):
         handle_reload()
-        st.rerun()
 
 
 update_button()
@@ -72,7 +87,8 @@ def get_sample_data(df_type: str) -> str:
     try:
         response = requests.get(f"{api_url}/api/sample_data", params={"df_type": df_type})
         return response.json()["data"]
-    except Exception:
+    except Exception as e:
+        logger.exception(e)
         # Fallback sample data
         if df_type == "tickets":
             return "queueId;date;new_tickets\n1;2017-01-01;10"
@@ -130,8 +146,8 @@ def upload_section():
 
     with left_col:
         st.subheader("Tickets Data Upload")
-        # with st.expander("Show sample format for tickets"):
-        #     st.table(get_sample_data("tickets"))
+        with st.expander("Show sample format for tickets"):
+            st.table(get_sample_data("tickets"))
 
         tickets_file = st.file_uploader(
             "Upload tickets CSV file (;-separated)", type=["csv"], key="tickets_upload"
@@ -139,12 +155,13 @@ def upload_section():
 
         if tickets_file and st.button("Upload Tickets Data"):
             handle_upload("tickets", tickets_file)
+            fetch_queues.clear()
             st.rerun()
 
     with right_col:
         st.subheader("Hierarchy Data Upload")
-        # with st.expander("Show sample format for hierarchy"):
-        #     st.table(get_sample_data("hierarchy"))
+        with st.expander("Show sample format for hierarchy"):
+            st.table(get_sample_data("hierarchy"))
 
         hierarchy_file = st.file_uploader(
             "Upload hierarchy CSV file", type=["csv"], key="hierarchy_upload"
@@ -152,6 +169,7 @@ def upload_section():
 
         if hierarchy_file and st.button("Upload Hierarchy Data"):
             handle_upload("hierarchy", hierarchy_file)
+            fetch_queues.clear()
             st.rerun()
 
     display_status()
@@ -183,21 +201,14 @@ if not st.session_state.data_available:
     st.stop()
 
 
-# @st.cache_data(ttl=600)
-def fetch_queues():
-    try:
-        response = requests.get(f"{api_url}/api/queues")
-        return response.json()["queues"]
-    except requests.exceptions.RequestException as e:
-        st.error(f"Error fetching queues: {str(e)}")
-        return []
-
-
-def fetch_queue_data(queue_id, start_date, end_date, granularity):
-    # Simulate API call - replace with actual endpoint
+def fetch_queue_data(queue_id: int, start_date: str, end_date: str, granularity: TimeGranularity):
     response = requests.get(
         f"{api_url}/api/historical/{queue_id}",
-        params={"start_date": start_date, "end_date": end_date, "granularity": granularity},
+        params={
+            "start_date": start_date,
+            "end_date": end_date,
+            "granularity": granularity.value,  # Use .value to get the string
+        },
     )
     return response.json()
 
@@ -276,9 +287,12 @@ def create_subqueues_stack_plot(data):
     return fig
 
 
+upload_section()
+
 queues = fetch_queues()
 
 if queues:
+    level_queue = st.sidebar.selectbox("Уровень очереди", options=list(range(1, 7)))
     selected_queue = st.sidebar.selectbox(
         "Выберите очередь",
         options=queues,
@@ -297,15 +311,21 @@ if queues:
     )
 
     # Извлечение начальной и конечной даты
-    if isinstance(date_range, tuple) and len(date_range) == EXPECTED_DATE_RANGE_LENGTH:
+    if isinstance(date_range, tuple) and len(date_range) == 2:  # noqa: PLR2004
         start_date, end_date = date_range
     else:
         start_date = end_date = date_range
 
-    granularity = st.sidebar.selectbox(
-        "Time Granularity", options=["Daily", "Weekly", "Monthly"], key="granularity"
+    GRANULARITY_DISPLAY = {
+        "Daily": TimeGranularity.DAILY,
+        "Weekly": TimeGranularity.WEEKLY,
+        "Monthly": TimeGranularity.MONTHLY,
+    }
+
+    selected_granularity = st.sidebar.selectbox(
+        "Time Granularity", options=list(GRANULARITY_DISPLAY.keys()), key="granularity"
     )
-    upload_section()
+    granularity = GRANULARITY_DISPLAY[selected_granularity]
 
     if selected_queue:
         try:
@@ -314,9 +334,12 @@ if queues:
             # make table with hierarchy stats
             # make table with time series stats
 
-            hist_response = requests.get(f"{api_url}/api/historical/{selected_queue['id']}")
-            hist_data = hist_response.json()
-
+            hist_data = fetch_queue_data(
+                selected_queue["id"],
+                date_range[0],
+                date_range[1],
+                granularity,
+            )
             fig = go.Figure()
 
             fig.add_trace(
@@ -327,9 +350,6 @@ if queues:
                     line={"color": "blue"},
                 )
             )
-            # queue_data = fetch_queue_data(
-            #     selected_queue["id"], date_range[0], date_range[1], granularity.lower()
-            # )
 
             # # Convert to DataFrame
             # df = pd.DataFrame(queue_data)

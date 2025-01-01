@@ -1,16 +1,19 @@
 import asyncio
+import io
 import math
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from typing import Annotated
 
 import pandas as pd
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 
 from tasks_support_system_ai.api.models.common import BaseResponse
 from tasks_support_system_ai.api.models.ts import (
+    DF_TYPE,
     AverageLoadWeekdays,
     AverageLoadWeekly,
+    DataFrameResponse,
     ForecastRequest,
     QueueStats,
     ResponseBool,
@@ -57,13 +60,20 @@ async def get_queues():
 
 
 @router.get("/api/historical/{queue_id}")
-async def get_historical_ts(queue_id: int) -> TimeSeriesData:
-    data_queue = all_data.get_df_slice(queue_id)
+async def get_historical_ts(
+    queue_id: int,
+    granularity: TimeGranularity = Query(
+        default=TimeGranularity.DAILY, description="Time granularity"
+    ),
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> TimeSeriesData:
+    data_queue = all_data.get_df_slice(queue_id, start_date, end_date, granularity)
     timestamps = data_queue["date"].dt.strftime("%Y-%m-%d").tolist()
 
     return TimeSeriesData(
         timestamps=timestamps,
-        values=data_queue["new_tickets"].tolist(),
+        values=data_queue["new_tickets"].squeeze().tolist(),
         queue_id=queue_id,
     )
 
@@ -161,30 +171,45 @@ async def forecast(request: ForecastRequest) -> TimeSeriesData:
     )
 
 
-@router.post("/api/upload_data")
-async def upload_data(
-    tickets_file: Annotated[UploadFile, File(description="CSV file with tickets data")],
-    hierarchy_file: Annotated[UploadFile, File(description="CSV file with hierarchy data")],
-):
-    """Upload new data files"""
+@router.get("/api/sample_data")
+async def get_sample_data(
+    df_type: Annotated[DF_TYPE, "Тип данных (тикеты или иерархия)"],
+) -> DataFrameResponse:
     try:
-        tickets_df = tickets_file
-        hierarchy_df = hierarchy_file
+        df = data_service.dataframes[df_type]
+        response_data = {
+            "columns": df.columns.tolist(),
+            "data": df.head(5).to_dict("records"),
+            "shape": df.shape,
+            "df_type": df_type,
+        }
 
-        # Печатаем названия столбцов для отладки
-        print("Columns in the file:", tickets_df.columns)
+        return DataFrameResponse(**response_data)
 
-        data_service.update_data(tickets_df, "tickets")
-        data_service.update_data(hierarchy_df, "hierarchy")
-
-        # tickets_data = TSTicketsData(data_service)
-        # hierarchy_data = TSHierarchyData(data_service)
-        # all_data = TSDataIntersection(tickets_data, hierarchy_data)
-        # ts_predictor = TSPredictor(all_data)
-        print(tickets_df.head())  # Для проверки вывода данных
-
-        return {"message": "Data updated successfully"}
     except KeyError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/upload_data")
+async def upload_data(
+    file: Annotated[UploadFile, File(description="CSV file with data")],
+    df_type: Annotated[DF_TYPE, Form(description="Тип данных (тикеты или иерархия)")],
+) -> BaseResponse:
+    """
+    Upload and process CSV data files.
+
+    - **file**: CSV file containing either tickets or hierarchy data
+    - **df_type**: Type of data frame ('tickets' or 'hierarchy')
+    """
+    try:
+        contents = await file.read()
+
+        file_obj = io.BytesIO(contents)
+
+        data_service.update_data(file_obj, df_type)
+
+        return BaseResponse(message="Data updated successfully", status="success")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

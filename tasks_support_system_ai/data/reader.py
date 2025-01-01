@@ -86,7 +86,7 @@ class TSTicketsData:
             TimeGranularity.MONTHLY: "M",
         }[granularity]
 
-        return df.resample(grouper, on="date").agg({"new_tickets": ["sum"]})
+        return df.resample(grouper, on="date").agg({"new_tickets": ["sum"]}).reset_index()
 
 
 class TSHierarchyData:
@@ -130,10 +130,10 @@ class TSDataIntersection:
         """Фильтрация. 0 - это все тикеты."""
 
         if queue_id != 0:
-            df = self.get_df_slice(queue_id)
+            df = self.get_df_slice(queue_id, date_start, date_end)
         else:
             df = self.tickets.df.groupby("date")[["new_tickets"]].sum().reset_index()
-        df = df[df["date"].between(str(date_start), str(date_end))]
+        # df = df[df["date"].between(str(date_start), str(date_end))]
         return df
 
     def get_top_queues(self, top_n=10) -> dict:
@@ -162,13 +162,23 @@ class TSDataIntersection:
             ]
         }
 
-    def get_df_slice(self, queue_id: int) -> pd.DataFrame:
+    def get_df_slice(
+        self,
+        queue_id: int,
+        date_start,
+        date_end,
+        granularity: TimeGranularity | None = None,
+    ) -> pd.DataFrame:
         tree = self.hierarchy.df
         df = self.tickets.df
         queues = tree[tree["queueId"] == queue_id]["allDescendants"].values[0]
         df_slice = (
             df[df["queueId"].isin(queues)].groupby("date")[["new_tickets"]].sum().reset_index()
         )
+        if date_start and date_end:
+            df_slice = df_slice[df_slice["date"].between(str(date_start), str(date_end))]
+        if granularity:
+            df_slice = self.tickets.resample_data(df_slice, granularity)
         return df_slice
 
     def get_queue_stats(

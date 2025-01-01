@@ -7,6 +7,7 @@ https://medium.com/@dhavalsavalia/fastapi-logging-middleware-logging-requests-an
 import json
 import logging
 import time
+import traceback
 from collections.abc import Callable
 from uuid import uuid4
 
@@ -46,15 +47,28 @@ class RouterLoggingMiddleware(BaseHTTPMiddleware):
         # X-API-REQUEST-ID maps each request-response to a unique ID
         logging_dict = {"X-API-REQUEST-ID": request_id}
 
-        await self.set_body(request)
-        response, response_dict = await self._log_response(call_next, request, request_id)
-        request_dict = await self._log_request(request)
-        logging_dict["request"] = request_dict
-        logging_dict["response"] = response_dict
+        try:
+            await self.set_body(request)
+            response, response_dict = await self._log_response(call_next, request, request_id)
+            request_dict = await self._log_request(request)
+            logging_dict["request"] = request_dict
+            logging_dict["response"] = response_dict
 
-        self._logger.info(logging_dict)
+            self._logger.info(logging_dict)
 
-        return response
+            return response
+        except Exception as e:
+            self._logger.error(
+                {
+                    **logging_dict,
+                    "error": {
+                        "type": type(e).__name__,
+                        "message": str(e),
+                        "traceback": traceback.format_exc(),
+                    },
+                }
+            )
+            raise
 
     async def set_body(self, request: Request):
         """Avails the response body to be logged within a middleware as,
@@ -110,27 +124,38 @@ class RouterLoggingMiddleware(BaseHTTPMiddleware):
         start_time = time.perf_counter()
         response = await self._execute_request(call_next, request, request_id)
         finish_time = time.perf_counter()
-
-        overall_status = "successful" if response.status_code < 400 else "failed"  # noqa: PLR2004
-        execution_time = finish_time - start_time
-
-        response_logging = {
-            "status": overall_status,
-            "status_code": response.status_code,
-            "time_taken": f"{execution_time:0.4f}s",
-        }
-
-        resp_body = [section async for section in response.__dict__["body_iterator"]]
-        response.__setattr__("body_iterator", AsyncIteratorWrapper(resp_body))
-
         try:
-            resp_body = json.loads(resp_body[0].decode())
-        except Exception:
-            resp_body = str(resp_body)
+            overall_status = "successful" if response.status_code < 400 else "failed"  # noqa: PLR2004
+            execution_time = finish_time - start_time
 
-        response_logging["body"] = resp_body
+            response_logging = {
+                "status": overall_status,
+                "status_code": response.status_code,
+                "time_taken": f"{execution_time:0.4f}s",
+            }
 
-        return response, response_logging
+            resp_body = [section async for section in response.__dict__["body_iterator"]]
+            response.__setattr__("body_iterator", AsyncIteratorWrapper(resp_body))
+
+            try:
+                resp_body = json.loads(resp_body[0].decode())
+            except Exception:
+                resp_body = str(resp_body)
+
+            response_logging["body"] = resp_body
+
+            return response, response_logging
+        except Exception as e:
+            error_response = {
+                "status_code": 500,
+                "status": "error",
+                "error": {
+                    "type": type(e).__name__,
+                    "message": str(e),
+                    "traceback": traceback.format_exc(),
+                },
+            }
+            return response, error_response
 
     async def _execute_request(
         self, call_next: Callable, request: Request, request_id: str
@@ -157,3 +182,37 @@ class RouterLoggingMiddleware(BaseHTTPMiddleware):
             self._logger.exception(
                 {"path": request.url.path, "method": request.method, "reason": e}
             )
+
+
+class RouterLoggingMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app: FastAPI, *, logger: logging.Logger) -> None:
+        self._logger = logger
+        super().__init__(app)
+
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+
+        try:
+            status_code = response.status_code
+        except AttributeError:
+            status_code = 500
+
+        path = request.url.path
+        if request.query_params:
+            path += f"?{request.query_params}"
+
+        self._logger.info(
+            "Incoming request",
+            extra={
+                "req": {
+                    "method": request.method,
+                    "url": str(request.url),
+                    "path": path,
+                    "ip": request.client.host,
+                },
+                "res": {
+                    "status_code": status_code,
+                },
+            },
+        )
+        return response
