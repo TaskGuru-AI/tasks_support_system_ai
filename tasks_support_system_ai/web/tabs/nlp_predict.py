@@ -1,7 +1,7 @@
 import os
 
 import pandas as pd
-import requests
+# import requests
 import streamlit as st
 
 BACKEND_URL = "http://backend:8000/nlp"
