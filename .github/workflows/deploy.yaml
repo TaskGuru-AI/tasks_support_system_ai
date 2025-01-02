@@ -7,7 +7,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v2
 
@@ -37,6 +37,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_SSH_KEY }}
+          command_timeout: "30m"
           script: |
             set -e
             cd /opt/app
@@ -54,11 +55,11 @@ jobs:
             echo "${{ secrets.ENV_FILE }}" > temp/.env
 
             # Remove old files except volumes
-            rm -rf $(ls -A | grep -v '^temp$' | grep -v 'volumes')
+            echo ${{ secrets.SERVER_PASSWORD }} | sudo -S rm -rf $(ls -A | grep -v '^temp$' | grep -v 'volumes')
 
             # Move new files from temp
-            mv temp/* temp/.[!.]* .
-            rm -rf temp
+            sudo mv temp/* temp/.[!.]* .
+            sudo rm -rf temp
 
             # сначала поднимаем backend, minio
             # скачиваем данные из minio

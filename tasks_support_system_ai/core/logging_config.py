@@ -9,7 +9,6 @@ from tasks_support_system_ai.core.config import settings
 class JSONFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         """Custom formatter that handles both dict and non-dict messages."""
-        # Basic log record attributes
         log_data = {
             "timestamp": self.formatTime(record),
             "level": record.levelname,
@@ -17,7 +16,6 @@ class JSONFormatter(logging.Formatter):
             "module": record.module,
         }
 
-        # Handle the message part
         if isinstance(record.msg, dict):
             log_data.update(record.msg)
         elif isinstance(record.msg, BaseException):
@@ -25,13 +23,12 @@ class JSONFormatter(logging.Formatter):
                 {
                     "message": str(record.msg),
                     "error_type": record.msg.__class__.__name__,
-                    "traceback": traceback.format_exc(),
+                    "traceback": traceback.format_exc().split("\n"),
                 }
             )
         else:
             log_data["message"] = str(record.msg)
 
-        # Add exception info if present
         if record.exc_info:
             log_data["exception"] = {
                 "type": record.exc_info[0].__name__,
@@ -39,7 +36,7 @@ class JSONFormatter(logging.Formatter):
                 "traceback": traceback.format_exception(*record.exc_info),
             }
 
-        return json.dumps(log_data)
+        return json.dumps(log_data, indent=4)
 
 
 def get_logging_config(
@@ -47,14 +44,19 @@ def get_logging_config(
     log_level: str = "INFO",
 ) -> dict:
     log_dir = settings.logs_path
-    log_dir.mkdir(exist_ok=True)
+    log_dir.mkdir(exist_ok=True, mode=0o777)
 
-    return {
+    config = {
         "version": 1,
         "disable_existing_loggers": False,
         "formatters": {
             "json": {"()": JSONFormatter},
             "standard": {"format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"},
+            "uvicorn": {
+                "()": "uvicorn.logging.DefaultFormatter",
+                "fmt": "%(levelprefix)s %(message)s",
+                "use_colors": True,
+            },
         },
         "handlers": {
             "console": {
@@ -66,7 +68,7 @@ def get_logging_config(
                 "class": "logging.handlers.RotatingFileHandler",
                 "formatter": "json",
                 "filename": f"logs/{app_name}.log",
-                "maxBytes": 10 * 10**20,  # 10MB
+                "maxBytes": 10 * 10**20,
                 "backupCount": 5,
                 "encoding": "utf-8",
             },
@@ -79,13 +81,54 @@ def get_logging_config(
                 "encoding": "utf-8",
                 "level": "ERROR",
             },
+            "uvicorn_console": {
+                "class": "logging.StreamHandler",
+                "formatter": "uvicorn",
+                "stream": "ext://sys.stdout",
+            },
         },
-        "loggers": {
-            app_name: {
-                "handlers": ["console", "file", "error_file"],
-                "level": log_level,
-                "propagate": False,
-            }
-        },
-        "root": {"handlers": ["console"], "level": "WARNING"},
+        "loggers": {},
     }
+
+    if app_name == "fastapi":
+        config["loggers"].update(
+            {
+                "fastapi": {
+                    "handlers": ["file", "error_file"],
+                    "level": log_level,
+                    "propagate": False,
+                },
+                "uvicorn": {
+                    "handlers": ["uvicorn_console"],
+                    "level": log_level,
+                    "propagate": False,
+                },
+                "uvicorn.access": {
+                    "handlers": ["uvicorn_console"],
+                    "level": log_level,
+                    "propagate": False,
+                },
+                "uvicorn.error": {
+                    "handlers": ["uvicorn_console", "error_file"],
+                    "level": log_level,
+                    "propagate": False,
+                },
+            }
+        )
+    else:
+        config["loggers"].update(
+            {
+                app_name: {
+                    "handlers": ["console", "file", "error_file"],
+                    "level": log_level,
+                    "propagate": False,
+                },
+            }
+        )
+
+    config["root"] = {
+        "handlers": ["console"],
+        "level": "WARNING",
+    }
+
+    return config
