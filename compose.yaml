@@ -92,6 +92,8 @@ services:
       - "8081:8080"
     volumes:
       - ./jenkins_home:/var/jenkins_home
+    profiles:
+      - deploy
     networks:
       - npm_network
 
