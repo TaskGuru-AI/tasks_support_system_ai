@@ -93,6 +93,7 @@ services:
       - production
     networks:
       - nginx_network
+      - app-network
 
 volumes:
   minio_data:
