@@ -87,7 +87,7 @@ services:
       - "443:443"
     volumes:
       - ./nginx/minio.conf:/etc/nginx/conf.d/minio.conf
-      - ./nginx/support.conf:/etc/nginx/conf.d/support.conf
+      # - ./nginx/support.conf:/etc/nginx/conf.d/support.conf
       - /etc/letsencrypt:/etc/letsencrypt:ro
     profiles:
       - production
