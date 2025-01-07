@@ -49,7 +49,7 @@ services:
   minio:
     image: minio/minio:latest
     networks:
-      - npm_network
+      - nginx_network
     volumes:
       - /opt/app/volumes/minio:/data
     environment:
@@ -66,22 +66,6 @@ services:
       timeout: 20s
       retries: 3
 
-  nginx-proxy-manager:
-    image: 'jc21/nginx-proxy-manager:latest'
-    container_name: nginx-proxy-manager
-    restart: unless-stopped
-    ports:
-      - '81:81'
-      - '80:80'
-      - '443:443'
-    volumes:
-      - ./nginx:/data
-      - /etc/letsencrypt:/etc/letsencrypt
-    profiles:
-      - production
-    networks:
-      - npm_network
-
   jenkins:
     image: jenkins/jenkins:lts-jdk17
     container_name: jenkins
@@ -94,7 +78,21 @@ services:
     profiles:
       - deploy
     networks:
-      - npm_network
+      - nginx_network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/minio.conf:/etc/nginx/conf.d/minio.conf
+      - ./nginx/support.conf:/etc/nginx/conf.d/support.conf
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    profiles:
+      - deploy
+    networks:
+      - nginx_network
 
 volumes:
   minio_data:
@@ -108,5 +106,5 @@ volumes:
 networks:
   app-network:
     driver: bridge
-  npm_network:
+  nginx_network:
     driver: bridge
