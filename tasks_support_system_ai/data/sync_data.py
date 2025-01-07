@@ -1,12 +1,14 @@
 import os
 import traceback
+from datetime import datetime
 from pathlib import Path
 
 import click
 from dotenv import find_dotenv, load_dotenv
 from minio import Minio
+from minio.commonconfig import CopySource
 
-load_dotenv(find_dotenv())
+assert load_dotenv(find_dotenv())
 
 MINIO_DOMAIN = "data.pyrogn.ru"
 BUCKET_NAME = "tasksai"
@@ -38,15 +40,17 @@ def pull():
 
         objects = client.list_objects(BUCKET_NAME, recursive=True)
         for obj in objects:
-            local_path = data_path / obj.object_name
-            local_path.parent.mkdir(exist_ok=True, parents=True)
+            local_path = Path("data") / obj.object_name
+            Path.mkdir(Path(local_path).parent, exist_ok=True, parents=True)
             client.fget_object(BUCKET_NAME, obj.object_name, local_path)
             click.echo(f"Downloaded: {obj.object_name}")
-
-        if os.name != "nt":
+        if os.name != "nt":  # Skip permission setting on Windows
             for path in data_path.rglob("*"):
                 try:
-                    path.chmod(0o777 if path.is_dir() else 0o666)
+                    if path.is_dir():
+                        path.chmod(0o777)
+                    else:
+                        path.chmod(0o666)
                 except Exception as e:
                     click.echo(f"Warning: Could not set permissions for {path}: {e}", err=True)
 
@@ -58,20 +62,54 @@ def pull():
 
 @cli.command()
 def push():
-    """Push local ./data folder to MinIO with versioning"""
+    """Push local ./data folder to MinIO (with backup)"""
     try:
-        # Create bucket if it doesn't exist and enable versioning
         if not client.bucket_exists(BUCKET_NAME):
             client.make_bucket(BUCKET_NAME)
-            print(client.get_bucket_versioning(BUCKET_NAME))
-            client.set_bucket_versioning(BUCKET_NAME, True)
-            click.echo(f"Created versioned bucket: {BUCKET_NAME}")
+            click.echo(f"Created bucket: {BUCKET_NAME}")
 
-        # Upload files
-        for file_path in Path("data").rglob("*"):
-            if file_path.is_file():
-                object_name = str(file_path.relative_to("data").as_posix())
-                client.fput_object(BUCKET_NAME, object_name, file_path)
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        backup_bucket = f"{BUCKET_NAME}-backup-{timestamp}"
+
+        # Backup existing data
+        if client.bucket_exists(BUCKET_NAME):
+            client.make_bucket(backup_bucket)
+            objects = client.list_objects(BUCKET_NAME, recursive=True)
+            for obj in objects:
+                source = CopySource(BUCKET_NAME, obj.object_name)
+                client.copy_object(backup_bucket, obj.object_name, source)
+            click.echo(f"Backup created in bucket: {backup_bucket}")
+
+            # remove main bucket
+            objects = client.list_objects(BUCKET_NAME, recursive=True)
+            for obj in objects:
+                client.remove_object(BUCKET_NAME, obj.object_name)
+
+            client.remove_bucket(BUCKET_NAME)
+            click.echo(f"Removed main bucket: {BUCKET_NAME}")
+
+            client.make_bucket(BUCKET_NAME)
+            click.echo(f"Recreated bucket: {BUCKET_NAME}")
+
+        all_buckets = [
+            bucket.name
+            for bucket in client.list_buckets()
+            if bucket.name.startswith(f"{BUCKET_NAME}-backup-")
+        ]
+        all_buckets.sort(reverse=True)
+
+        for old_bucket in all_buckets[KEEP_N_BACKUPS:]:
+            objects = client.list_objects(old_bucket, recursive=True)
+            for obj in objects:
+                client.remove_object(old_bucket, obj.object_name)
+            client.remove_bucket(old_bucket)
+            click.echo(f"Removed old backup bucket: {old_bucket}")
+
+        for root, _, files in os.walk("data"):
+            for file in files:
+                local_path = Path(root) / file
+                object_name = str(Path(os.path.relpath(local_path, "data")).as_posix())
+                client.fput_object(BUCKET_NAME, object_name, local_path)
                 click.echo(f"Uploaded: {object_name}")
 
         click.echo("Push completed successfully")
