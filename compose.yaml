@@ -90,7 +90,7 @@ services:
       - ./nginx/support.conf:/etc/nginx/conf.d/support.conf
       - /etc/letsencrypt:/etc/letsencrypt:ro
     profiles:
-      - deploy
+      - production
     networks:
       - nginx_network
 
