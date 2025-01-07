@@ -13,6 +13,8 @@ services:
       - ./.env
     networks:
       - app-network
+    profiles:
+      - app
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 5s
@@ -38,6 +40,8 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    profiles:
+      - app
     depends_on:
       backend:
         condition: service_healthy
@@ -45,7 +49,7 @@ services:
   minio:
     image: minio/minio:latest
     networks:
-      - minio_network
+      - nginx_network
     volumes:
       - /opt/app/volumes/minio:/data
     environment:
@@ -54,11 +58,27 @@ services:
       MINIO_SERVER_URL: "https://data.pyrogn.ru"
       MINIO_BROWSER_REDIRECT_URL: "https://data.pyrogn.ru/ui/"
     command: server /data --console-address ":9001"
+    profiles:
+      - production
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
       timeout: 20s
       retries: 3
+
+  jenkins:
+    image: jenkins/jenkins:lts-jdk17
+    container_name: jenkins
+    restart: unless-stopped
+    ports:
+      - "50000:50000"
+      - "8081:8080"
+    volumes:
+      - ./jenkins_home:/var/jenkins_home
+    profiles:
+      - deploy
+    networks:
+      - nginx_network
 
   nginx:
     image: nginx:alpine
@@ -67,13 +87,12 @@ services:
       - "443:443"
     volumes:
       - ./nginx/minio.conf:/etc/nginx/conf.d/minio.conf
-      - ./nginx/support.conf:/etc/nginx/conf.d/support.conf
+      # - ./nginx/support.conf:/etc/nginx/conf.d/support.conf
       - /etc/letsencrypt:/etc/letsencrypt:ro
-    depends_on:
-      - minio
-      - frontend
+    profiles:
+      - production
     networks:
-      - minio_network
+      - nginx_network
       - app-network
 
 volumes:
@@ -88,5 +107,5 @@ volumes:
 networks:
   app-network:
     driver: bridge
-  minio_network:
+  nginx_network:
     driver: bridge

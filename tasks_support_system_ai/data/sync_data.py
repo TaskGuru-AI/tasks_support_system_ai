@@ -8,7 +8,7 @@ from dotenv import find_dotenv, load_dotenv
 from minio import Minio
 from minio.commonconfig import CopySource
 
-load_dotenv(find_dotenv())
+assert load_dotenv(find_dotenv())
 
 MINIO_DOMAIN = "data.pyrogn.ru"
 BUCKET_NAME = "tasksai"
