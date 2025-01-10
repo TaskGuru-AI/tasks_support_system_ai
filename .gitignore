@@ -167,3 +167,7 @@ cython_debug/
 *.tsv
 *.model
 key
+*.log.*
+jenkins
+jenkins_home
+nginx

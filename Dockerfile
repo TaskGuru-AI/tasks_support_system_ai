@@ -27,3 +27,4 @@ RUN poetry install --only-root --no-interaction --no-ansi
 
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
+ENV IS_DOCKER=1
