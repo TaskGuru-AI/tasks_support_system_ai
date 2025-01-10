@@ -1,10 +1,15 @@
+
+import os
+
 import plotly.graph_objects as go
 import requests
 import streamlit as st
 
+
 from tasks_support_system_ai.core.config import settings
 
 backend_url = "http://backend:8000/nlp" if settings.is_docker else "http://localhost:8000/nlp"
+
 
 
 def select_model():
