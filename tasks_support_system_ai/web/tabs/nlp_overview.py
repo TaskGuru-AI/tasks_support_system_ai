@@ -1,7 +1,7 @@
 import streamlit as st
 
 
-def nlp_overview():
+def show_overview():
     st.subheader("1. Описание проекта")
     st.write("""
     **NLP часть проекта анализа задач службы техподдержки** 

@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -10,17 +9,16 @@ from darts import TimeSeries
 from darts.models import ExponentialSmoothing, LinearRegressionModel
 
 from tasks_support_system_ai.api.models.ts import ModelConfig, ModelInfo
+from tasks_support_system_ai.core.config import settings
+from tasks_support_system_ai.core.logger import backend_logger as logger
 from tasks_support_system_ai.data.reader import DataConversion, TSDataIntersection
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class TSPredictor:
     def __init__(self, data_service: TSDataIntersection):
         self.data_service = data_service
 
-    def predict_ts(self, queue_id: int, days_ahead: int) -> TimeSeries:
+    def predict_ts(self, queue_id: int, forecast_horizon: int) -> TimeSeries:
         data = self.data_service.get_tickets_load_filter(queue_id=queue_id)
         data = data.set_index("date")
         ts = DataConversion.pandas_to_darts(data)
@@ -28,30 +26,16 @@ class TSPredictor:
         model = LinearRegressionModel(lags=10)
         model.fit(ts)
 
-        forecast = model.predict(days_ahead)
+        forecast = model.predict(forecast_horizon)
 
         return forecast
 
 
-def validate_training_data(X: list[list[float]], y: list[float]) -> tuple[bool, str | None]:
+def validate_training_data(ts) -> tuple[bool, str | None]:
     """Валидация данных для обучения"""
     try:
-        X_array = np.array(X)
-        y_array = np.array(y)
-
-        if len(X_array.shape) != 2:  # noqa: PLR2004
-            return False, "X must be 2-dimensional"
-
-        if len(X_array) != len(y_array):
-            return (
-                False,
-                f"Inconsistent sample sizes: X has {len(X_array)} samples,"
-                f" y has {len(y_array)} samples",
-            )
-
-        if len(X_array) == 0:
-            return False, "Empty training data"
-
+        if not isinstance(ts, TimeSeries):
+            raise ValueError("ts should be darts.TimeSeries format")
         return True, None
     except Exception as e:
         return False, f"Invalid data format: {str(e)}"
@@ -103,29 +87,33 @@ class ModelService:
     MODEL_TYPES = {"linear": LinearRegressionModel, "smoothing": ExponentialSmoothing}
 
     def __init__(self):
-        self.models_dir = "models"
+        self.models_dir = settings.models_path
         self.models_dir.mkdir(exist_ok=True)
         self.loaded_models = {}
         self.current_loaded_model: str | None = None
-        self.max_loaded_models = 10
+        self.max_loaded_models = settings.max_loaded_models
         self._executor = ProcessPoolExecutor(max_workers=3)
         self.max_processes = 3
         self.active_processes = 0
         self._process_lock = asyncio.Lock()
 
-    async def fit_async(
-        self, X: list[list[float]], y: list[float], model_config: ModelConfig
-    ) -> str:
+    def get_model_id(self, model_class, date_start, date_end):
+        # TODO: new hyperparameters create new model
+        return model_class.__name__ + str(date_start) + str(date_end) + "_1"
+
+    async def fit_async(self, ts: TimeSeries, model_config: ModelConfig) -> str:
         """Асинхронная функция для обучения. Создает новый процесс, если возможно.
 
         Мы создаем новый процесс, а потом опрашиваем, закончил ли он работу, с небольшим интервалом.
         """
         try:
-            model_id = model_config["id"]
-
-            is_valid, error_message = validate_training_data(X, y)
+            is_valid, error_message = validate_training_data(ts)
             if not is_valid:
                 raise ValueError(error_message)
+
+            model_class = ModelConfig.ml_model_type
+            date_start, date_end = str(ts.time_index[0].date()), str(ts.time_index[-1].date())
+            model_id = self.get_model_id(model_class, date_start, date_end)
 
             if self._model_exists(model_id):
                 raise ValueError(f"Model with id {model_id} already exists")
@@ -143,7 +131,7 @@ class ModelService:
             try:
                 process = multiprocessing.Process(
                     target=train_model_process,
-                    args=(X, y, model_config, str(self.models_dir)),
+                    args=(ts, model_config, str(self.models_dir)),
                 )
                 process.start()
 

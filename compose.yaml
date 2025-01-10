@@ -3,30 +3,45 @@ services:
     build: .
     command: poetry run uvicorn tasks_support_system_ai.main:app --host 0.0.0.0 --port 8000
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - LOG_LEVEL=INFO
+    env_file:
+      - ./.env
     networks:
       - app-network
+    profiles:
+      - app
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 1s
-
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 2s
 
   frontend:
     build: .
     command: poetry run streamlit run tasks_support_system_ai/web/app.py --server.port 8501 --server.address 0.0.0.0
     ports:
-      - "8501:8501"
+      - "127.0.0.1:8501:8501"
     volumes:
       - ./data:/app/data
+      - ./logs:/app/logs
     environment:
-      IS_DOCKER: 1
+      - LOG_LEVEL=INFO
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    profiles:
+      - app
     depends_on:
       backend:
         condition: service_healthy
@@ -34,20 +49,36 @@ services:
   minio:
     image: minio/minio:latest
     networks:
-      - minio_network
+      - nginx_network
     volumes:
-      - minio_data:/data
+      - /opt/app/volumes/minio:/data
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
       MINIO_SERVER_URL: "https://data.pyrogn.ru"
       MINIO_BROWSER_REDIRECT_URL: "https://data.pyrogn.ru/ui/"
     command: server /data --console-address ":9001"
+    profiles:
+      - production
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
       timeout: 20s
       retries: 3
+
+  jenkins:
+    image: jenkins/jenkins:lts-jdk17
+    container_name: jenkins
+    restart: unless-stopped
+    ports:
+      - "50000:50000"
+      - "8081:8080"
+    volumes:
+      - ./jenkins_home:/var/jenkins_home
+    profiles:
+      - deploy
+    networks:
+      - nginx_network
 
   nginx:
     image: nginx:alpine
@@ -55,18 +86,26 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/minio.conf:/etc/nginx/conf.d/minio.conf
+      # - ./nginx/support.conf:/etc/nginx/conf.d/support.conf
       - /etc/letsencrypt:/etc/letsencrypt:ro
-    depends_on:
-      - minio
+    profiles:
+      - production
     networks:
-      - minio_network
+      - nginx_network
+      - app-network
 
 volumes:
   minio_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/app/volumes/minio
+  logs:
 
 networks:
   app-network:
     driver: bridge
-  minio_network:
+  nginx_network:
     driver: bridge

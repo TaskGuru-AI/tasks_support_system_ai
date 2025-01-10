@@ -1,4 +1,3 @@
-import logging
 import uuid
 
 import pandas as pd
@@ -10,12 +9,10 @@ from sklearn.svm import SVC
 # from imblearn.over_sampling import RandomOverSampler
 # from imblearn.under_sampling import RandomUnderSampler
 from tasks_support_system_ai.api.models.nlp import LogisticConfig, SVMConfig
+from tasks_support_system_ai.core.logger import backend_logger as logger  # noqa: F401
 from tasks_support_system_ai.data.nlp.reader import NLPTicketsData
 from tasks_support_system_ai.services.nlp.model_service import ModelService
 from tasks_support_system_ai.utils.nlp import vector_transform
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 model_service = ModelService()
 
@@ -56,7 +53,7 @@ class NLPPredictor:
         model_service.remove_model(model_id)
 
 
-def train_logistic_model(train: pd.DataFrame, test: pd.DataFrame, config: LogisticConfig) -> str:
+def train_logistic_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMConfig) -> str:
     """
     Method to train a Logistic Regression model
     :param config: Model configuration
@@ -87,7 +84,7 @@ def train_logistic_model(train: pd.DataFrame, test: pd.DataFrame, config: Logist
     return model_id
 
 
-def train_svm_model(train: pd.DataFrame, test: pd.DataFrame, config: LogisticConfig) -> str:
+def train_svm_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMConfig) -> str:
     """ "
     Method to train an SVM model
     :param config: Model configuration
@@ -98,7 +95,12 @@ def train_svm_model(train: pd.DataFrame, test: pd.DataFrame, config: LogisticCon
     X_test, y_test = test["vector"], test["cluster"]
     X_test = vector_transform(X_test)
 
-    model = SVC(C=config.C, kernel=config.kernel, class_weight=config.class_weight)
+    model = SVC(
+        C=config.C,
+        kernel=config.kernel,
+        class_weight=config.class_weight,
+        decision_function_shape="ovr",
+    )
     model.fit(X_train, y_train)
 
     model_id = str(uuid.uuid4())

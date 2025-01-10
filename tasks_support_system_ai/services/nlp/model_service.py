@@ -1,12 +1,9 @@
 import asyncio
-import logging
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
+from tasks_support_system_ai.core.logger import backend_logger as logger
 from tasks_support_system_ai.utils.nlp import delete, save
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class ModelService:
@@ -17,7 +14,7 @@ class ModelService:
         Initialize the model service.
         """
         self.models_dir = Path("models/nlp")
-        self.models_dir.mkdir(exist_ok=True)
+        self.models_dir.mkdir(exist_ok=True, parents=True)
         self.models_statistics = {}
         self.current_loaded_model: str | None = None
         self.max_loaded_models = 10
@@ -30,7 +27,7 @@ class ModelService:
 
         file_path = nlp_dir / f"{model_id}.model"
         save(model, file_path)
-        print(f"Model saved to '{file_path}'.")
+        logger.info(f"Model saved to '{file_path}'.")
 
     def save_stats(self, model_id: str, stats: dict) -> None:
         self.models_statistics[model_id] = stats
@@ -46,9 +43,9 @@ class ModelService:
         file_path = self.models_dir / f"{model_id}.model"
         if file_path.exists():
             delete(file_path)
-            print(f"Model '{model_id}' removed.")
+            logger.info(f"Model '{model_id}' removed.")
         else:
-            print(f"Model '{model_id}' does not exist.")
+            logger.info(f"Model '{model_id}' does not exist.")
 
     def load_model(self, model_name: str):
         """
@@ -56,7 +53,7 @@ class ModelService:
         :param model_name: The name of the model to load.
         """
         if model_name in self.loaded_models:
-            print(f"Model '{model_name}' is already loaded.")
+            logger.info(f"Model '{model_name}' is already loaded.")
             return
 
         model_path = self.models_dir / model_name
@@ -69,7 +66,7 @@ class ModelService:
         # Placeholder for actual model loading logic
         self.loaded_models[model_name] = f"Loaded model from {model_path}"
         self.current_loaded_model = model_name
-        print(f"Model '{model_name}' loaded.")
+        logger.info(f"Model '{model_name}' loaded.")
 
     def unload_model(self, model_name: str):
         """
@@ -80,9 +77,9 @@ class ModelService:
             self.loaded_models.pop(model_name)
             if self.current_loaded_model == model_name:
                 self.current_loaded_model = None
-            print(f"Model '{model_name}' unloaded.")
+            logger.info(f"Model '{model_name}' unloaded.")
         else:
-            print(f"Model '{model_name}' is not loaded.")
+            logger.info(f"Model '{model_name}' is not loaded.")
 
     def list_models(self):
         """
