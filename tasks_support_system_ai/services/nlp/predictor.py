@@ -45,8 +45,6 @@ class NLPPredictor:
 
         return prediction.tolist()
 
-    
-
     def train(self, model: str, config: LogisticConfig | SVMConfig) -> str:
         """
         Train a model based on the given type and configuration.
