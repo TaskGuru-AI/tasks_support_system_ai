@@ -25,6 +25,8 @@ python-dotenv = "^1.0.1"
 uuid = "^1.30"
 pydantic-settings = "^2.7.0"
 imblearn = "^0.0"
+pymorphy3 = "^2.0.2"
+nltk = "^3.9.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.3"

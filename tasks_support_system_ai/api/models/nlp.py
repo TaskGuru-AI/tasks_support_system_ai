@@ -19,6 +19,11 @@ class FitRequest(BaseModel):
     config: LogisticConfig | SVMConfig
 
 
+class PredictionRequest(BaseModel):
+    id: str
+    text: str
+
+
 class ModelResponse(BaseModel):
     """
     Уникальный ID сгенерированной модели
@@ -40,3 +45,7 @@ class ClassificationReport(BaseModel):
     macro_avg: ClassMetrics
     weighted_avg: ClassMetrics
     classes: dict[str, ClassMetrics]
+
+
+class ClustersResponse(BaseModel):
+    clusters: list[int]

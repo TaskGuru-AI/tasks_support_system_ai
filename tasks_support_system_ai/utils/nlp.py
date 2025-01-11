@@ -1,3 +1,4 @@
+import ast
 import asyncio
 import pickle
 from pathlib import Path
@@ -34,6 +35,5 @@ def vector_transform(data) -> np.ndarray:
     :return: np.ndarray: Transformed data as a list of numpy arrays,
     where each element is a vector representation of a text document.
     """
-    data = data.apply(lambda x: x.replace("\n", " ").strip()[1:-1])
-    data = data.apply(lambda x: np.fromstring(x, sep=" "))
-    return data.to_list()
+    data = data.apply(ast.literal_eval)
+    return np.vstack(data)
