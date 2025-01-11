@@ -56,7 +56,7 @@ class ModelService:
         """
         if model_id in self.loaded_models:
             logger.info(f"Model '{model_id}' is already loaded.")
-            return
+            return self.loaded_models[model_id]
 
         model_path = self.models_dir / f"{model_id}.model"
         if not model_path.exists():
