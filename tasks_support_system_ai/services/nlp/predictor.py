@@ -40,10 +40,10 @@ class NLPPredictor:
 
         model = model_service.load_model(model_id)
         tokenized_text = text_preprocessor.preprocess_text(text)
-        vector = get_mean_vector(tokenized_text, self.w2v_model)
-        prediction = model.predict(vector.reshape(1, -1)).tolist()
+        vector = [get_mean_vector(tokenized_text, self.w2v_model)]
+        prediction = model.predict(vector)
 
-        return prediction
+        return prediction.tolist()
 
     def train(self, model: str, config: LogisticConfig | SVMConfig) -> str:
         """
