@@ -58,7 +58,7 @@ class ModelService:
             logger.info(f"Model '{model_id}' is already loaded.")
             return
 
-        model_path = self.models_dir / model_id
+        model_path = self.models_dir / f"{model_id}.model"
         if not model_path.exists():
             raise FileNotFoundError(f"Model '{model_id}' not found in directory.")
 

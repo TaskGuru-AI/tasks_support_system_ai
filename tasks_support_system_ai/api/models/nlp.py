@@ -45,3 +45,6 @@ class ClassificationReport(BaseModel):
     macro_avg: ClassMetrics
     weighted_avg: ClassMetrics
     classes: dict[str, ClassMetrics]
+
+class ClustersResponse(BaseModel):
+    clusters: list[int]

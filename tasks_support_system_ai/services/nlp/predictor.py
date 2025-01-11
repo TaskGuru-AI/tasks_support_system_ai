@@ -30,7 +30,7 @@ class NLPPredictor:
         self.test_data = data.get_test_data()
         self.w2v_model = data.get_word2vec_model()
 
-    def predict(self, model_id: str, text: str):
+    def predict(self, model_id: str, text: str) -> int:
         """
         Stub for prediction logic.
         """
@@ -41,7 +41,8 @@ class NLPPredictor:
         model = model_service.load_model(model_id)
         tokenized_text = text_preprocessor.preprocess_text(text)
         vector = get_mean_vector(tokenized_text, self.w2v_model)
-        prediction = model.predict(vector.reshape(1, -1))[0]
+        prediction = model.predict(vector.reshape(1, -1)).tolist()
+
         return prediction
 
     def train(self, model: str, config: LogisticConfig | SVMConfig) -> str:
@@ -73,10 +74,9 @@ def train_logistic_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMCon
     """
     X_train, y_train = train["vector"], train["cluster"]
     X_train = vector_transform(X_train)
-    y_train = y_train.to_list()
+
     X_test, y_test = test["vector"], test["cluster"]
     X_test = vector_transform(X_test)
-    y_test = y_test.to_list()
 
     model = OneVsRestClassifier(LogisticRegression(C=config.C, solver=config.solver))
     model.fit(X_train, y_train)
@@ -87,7 +87,7 @@ def train_logistic_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMCon
     y_pred = model.predict(X_test)
 
     roc_auc = roc_auc_score(y_test, y_pred_proba, multi_class="ovr")
-    report = classification_report(y_test, y_pred, output_dict=True)
+    report = classification_report(y_test, y_pred, output_dict=True, zero_division=0)
     report["roc_auc"] = roc_auc
 
     model_service.save(model, model_id)
@@ -104,6 +104,7 @@ def train_svm_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMConfig) 
     """
     X_train, y_train = train["vector"], train["cluster"]
     X_train = vector_transform(X_train)
+
     X_test, y_test = test["vector"], test["cluster"]
     X_test = vector_transform(X_test)
 
@@ -112,6 +113,7 @@ def train_svm_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMConfig) 
         kernel=config.kernel,
         class_weight=config.class_weight,
         decision_function_shape="ovr",
+        probability=True
     )
     model.fit(X_train, y_train)
 

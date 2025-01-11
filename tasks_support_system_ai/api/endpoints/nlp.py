@@ -9,6 +9,7 @@ from tasks_support_system_ai.api.models.nlp import (
     ClassMetrics,
     FitRequest,
     PredictionRequest,
+    ClustersResponse
 )
 from tasks_support_system_ai.core.logger import fastapi_logger as logger
 from tasks_support_system_ai.data.nlp.reader import NLPDataManager, NLPTicketsData
@@ -45,7 +46,7 @@ async def get_statistics(id: str):
                 key: ClassMetrics(**value)
                 for key, value in classification_report_data.items()
                 if isinstance(value, dict)
-                and key not in ["accuracy", "macro avg", "weighted avg", "roc_auc"]
+                   and key not in ["accuracy", "macro avg", "weighted avg", "roc_auc"]
             },
         )
     except Exception as e:
@@ -62,15 +63,17 @@ async def remove_nlp_model(id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/predict_nlp")
+@router.post("/api/predict_nlp", response_model=ClustersResponse)
 async def predict_nlp(request: PredictionRequest):
-    loop = asyncio.get_event_loop()
-    cluster = await loop.run_in_executor(
-        executor, nlp_predictor.predict, request.id, request.text
-    )
-
-    return cluster
-
+    try:
+        loop = asyncio.get_event_loop()
+        clusters = await loop.run_in_executor(
+            executor, nlp_predictor.predict, request.id, request.text
+        )
+        return ClustersResponse(clusters=clusters)
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 # @router.post("/api/predict_nlp_csv)
 # async def predict_nlp():
