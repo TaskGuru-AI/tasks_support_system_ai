@@ -3,7 +3,7 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 from tasks_support_system_ai.core.logger import backend_logger as logger
-from tasks_support_system_ai.utils.nlp import delete, save
+from tasks_support_system_ai.utils.nlp import delete, save, load_file
 
 
 class ModelService:
@@ -15,6 +15,7 @@ class ModelService:
         """
         self.models_dir = Path("models/nlp")
         self.models_dir.mkdir(exist_ok=True, parents=True)
+        self.loaded_models = {}
         self.models_statistics = {}
         self.current_loaded_model: str | None = None
         self.max_loaded_models = 10
@@ -45,28 +46,32 @@ class ModelService:
             delete(file_path)
             logger.info(f"Model '{model_id}' removed.")
         else:
-            logger.info(f"Model '{model_id}' does not exist.")
+            logger.error(f"Model '{model_id}' does not exist.")
+            raise KeyError(f"Model {model_id} not found")
 
-    def load_model(self, model_name: str):
+    def load_model(self, model_id: str):
         """
         Load a model into memory.
         :param model_name: The name of the model to load.
         """
-        if model_name in self.loaded_models:
-            logger.info(f"Model '{model_name}' is already loaded.")
+        if model_id in self.loaded_models:
+            logger.info(f"Model '{model_id}' is already loaded.")
             return
 
-        model_path = self.models_dir / model_name
+        model_path = self.models_dir / model_id
         if not model_path.exists():
-            raise FileNotFoundError(f"Model '{model_name}' not found in directory.")
+            raise FileNotFoundError(f"Model '{model_id}' not found in directory.")
 
         if len(self.loaded_models) >= self.max_loaded_models:
             raise MemoryError("Maximum number of loaded models reached.")
 
-        # Placeholder for actual model loading logic
-        self.loaded_models[model_name] = f"Loaded model from {model_path}"
-        self.current_loaded_model = model_name
-        logger.info(f"Model '{model_name}' loaded.")
+        model = load_file(model_path)
+        self.loaded_models[model_id] = model
+        self.current_loaded_model = model_id
+
+        info = f"Model '{model_id}' loaded."
+        logger.info(info)
+        return model
 
     def unload_model(self, model_name: str):
         """
@@ -87,3 +92,7 @@ class ModelService:
         :return: A list of model names.
         """
         return [model.name for model in self.models_dir.iterdir() if model.is_file()]
+
+    def _model_exists(self, model_id: str) -> bool:
+        model_path = self.models_dir / f"{model_id}.model"
+        return model_path.exists()

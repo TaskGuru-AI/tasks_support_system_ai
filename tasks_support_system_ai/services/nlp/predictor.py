@@ -1,5 +1,6 @@
 import uuid
 
+import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, roc_auc_score
@@ -12,9 +13,11 @@ from tasks_support_system_ai.api.models.nlp import LogisticConfig, SVMConfig
 from tasks_support_system_ai.core.logger import backend_logger as logger  # noqa: F401
 from tasks_support_system_ai.data.nlp.reader import NLPTicketsData
 from tasks_support_system_ai.services.nlp.model_service import ModelService
+from tasks_support_system_ai.services.nlp.preprocessor import TextPreprocessor
 from tasks_support_system_ai.utils.nlp import vector_transform
 
 model_service = ModelService()
+text_preprocessor = TextPreprocessor()
 
 
 class NLPPredictor:
@@ -25,12 +28,21 @@ class NLPPredictor:
         """
         self.train_data = data.get_train_data()
         self.test_data = data.get_test_data()
+        self.w2v_model = data.get_word2vec_model()
 
-    def predict(self):
+    def predict(self, model_id: str, text: str):
         """
         Stub for prediction logic.
         """
-        raise NotImplementedError("Prediction logic is not implemented yet.")
+        if not model_service._model_exists(model_id):
+            logger.error(f"Model '{model_id}' does not exist.")
+            raise ValueError(f"Model {model_id} not found")
+
+        model = model_service.load_model(model_id)
+        tokenized_text = text_preprocessor.preprocess_text(text)
+        vector = get_mean_vector(tokenized_text, self.w2v_model)
+        prediction = model.predict(vector.reshape(1, -1))[0]
+        return prediction
 
     def train(self, model: str, config: LogisticConfig | SVMConfig) -> str:
         """
@@ -116,3 +128,9 @@ def train_svm_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMConfig) 
     model_service.save_stats(model_id, report)
 
     return model_id
+
+
+def get_mean_vector(text, w2v_model):
+    words = [w for w in text if w in w2v_model.wv]
+    vector = np.mean(w2v_model.wv[words], axis=0) if words else np.zeros(w2v_model.vector_size)
+    return vector

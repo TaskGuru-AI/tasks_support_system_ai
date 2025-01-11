@@ -19,6 +19,11 @@ class FitRequest(BaseModel):
     config: LogisticConfig | SVMConfig
 
 
+class PredictionRequest(BaseModel):
+    id: str
+    text: str
+
+
 class ModelResponse(BaseModel):
     """
     Уникальный ID сгенерированной модели
