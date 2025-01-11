@@ -113,7 +113,7 @@ def train_svm_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMConfig) 
         kernel=config.kernel,
         class_weight=config.class_weight,
         decision_function_shape="ovr",
-        probability=True
+        probability=True,
     )
     model.fit(X_train, y_train)
 

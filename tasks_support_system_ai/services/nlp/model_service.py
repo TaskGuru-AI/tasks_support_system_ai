@@ -3,7 +3,7 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 from tasks_support_system_ai.core.logger import backend_logger as logger
-from tasks_support_system_ai.utils.nlp import delete, save, load_file
+from tasks_support_system_ai.utils.nlp import delete, load_file, save
 
 
 class ModelService:
