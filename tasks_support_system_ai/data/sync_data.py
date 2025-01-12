@@ -10,7 +10,7 @@ from minio.commonconfig import CopySource
 
 assert load_dotenv(find_dotenv())
 
-MINIO_DOMAIN = "data.pyrogn.ru"
+MINIO_DOMAIN = "s3.pyrogn.ru"
 BUCKET_NAME = "tasksai"
 KEEP_N_BACKUPS = 10
 
