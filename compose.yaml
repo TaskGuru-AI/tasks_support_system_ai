@@ -55,8 +55,6 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
-      MINIO_SERVER_URL: "https://data.pyrogn.ru"
-      MINIO_BROWSER_REDIRECT_URL: "https://data.pyrogn.ru/ui/"
     command: server /data --console-address ":9001"
     profiles:
       - production
@@ -70,31 +68,13 @@ services:
     image: nginx:alpine
     ports:
       - "80:80"
-      - "443:443"
     volumes:
-      - ./nginx/minio.conf:/etc/nginx/conf.d/minio.conf
-      # - ./nginx/support.conf:/etc/nginx/conf.d/support.conf
-      - ./certs:/etc/letsencrypt:ro
+      - ./nginx/minio.conf:/etc/nginx/conf.d/minio.conf:ro
     profiles:
       - production
     networks:
       - nginx_network
       - app-network
-    depends_on:
-      - certbot
-
-  certbot:
-    image: certbot/certbot:latest
-    volumes:
-      - ./certs:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
-    entrypoint: /bin/sh -c 'trap exit TERM; while :; do sleep 12h & wait $${!}; certbot renew --webroot -w /var/www/certbot; done'
-    # initial issuance
-    # docker compose run certbot certonly --webroot -w /var/www/certbot -d your.domain --email your-email@example.com --agree-tos --non-interactive
-    profiles:
-      - production
-    networks:
-      - nginx_network
 
 volumes:
   minio_data:
