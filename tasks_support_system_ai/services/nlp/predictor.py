@@ -6,6 +6,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, roc_auc_score
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import SVC
+from fastapi import UploadFile
 
 # from imblearn.over_sampling import RandomOverSampler
 # from imblearn.under_sampling import RandomUnderSampler
@@ -15,6 +16,7 @@ from tasks_support_system_ai.data.nlp.reader import NLPTicketsData
 from tasks_support_system_ai.services.nlp.model_service import ModelService
 from tasks_support_system_ai.services.nlp.preprocessor import TextPreprocessor
 from tasks_support_system_ai.utils.nlp import vector_transform
+from typing import Literal
 
 model_service = ModelService()
 text_preprocessor = TextPreprocessor()
@@ -39,11 +41,26 @@ class NLPPredictor:
             raise ValueError(f"Model {model_id} not found")
 
         model = model_service.load_model(model_id)
+
         tokenized_text = text_preprocessor.preprocess_text(text)
         vector = [get_mean_vector(tokenized_text, self.w2v_model)]
         prediction = model.predict(vector)
 
         return prediction.tolist()
+
+    def predict_for_file(self, model_id: str, df: pd.DataFrame) -> pd.DataFrame:
+        if not model_service._model_exists(model_id):
+            logger.error(f"Model '{model_id}' does not exist.")
+            raise ValueError(f"Model {model_id} not found")
+
+        model = model_service.load_model(model_id)
+
+        X = transform_data(df, self.w2v_model)
+        prediction = model.predict(X)
+        df.drop(columns=['tokenized_text'], inplace=True)
+        df['prediction'] = prediction
+
+        return df
 
     def train(self, model: str, config: LogisticConfig | SVMConfig) -> str:
         """
@@ -132,7 +149,15 @@ def train_svm_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMConfig) 
     return model_id
 
 
+def transform_data(df, w2v_model):
+    for index, text in enumerate(df['ticket']):
+        row = text_preprocessor.preprocess_text(text)
+        df.at[index, 'tokenized_text'] = ' '.join(row)
+    X = np.array([get_mean_vector(text, w2v_model) for text in df['tokenized_text']])
+    return X
+
 def get_mean_vector(text, w2v_model):
     words = [w for w in text if w in w2v_model.wv]
     vector = np.mean(w2v_model.wv[words], axis=0) if words else np.zeros(w2v_model.vector_size)
     return vector
+

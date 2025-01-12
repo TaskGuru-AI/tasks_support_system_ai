@@ -1,5 +1,6 @@
 from typing import Literal
 
+from fastapi import UploadFile
 from pydantic import BaseModel, Field
 
 
@@ -19,10 +20,13 @@ class FitRequest(BaseModel):
     config: LogisticConfig | SVMConfig
 
 
-class PredictionRequest(BaseModel):
+class TextPredictionRequest(BaseModel):
     id: str
     text: str
 
+class FilePredictionRequest(BaseModel):
+    id: str
+    file: UploadFile
 
 class ModelResponse(BaseModel):
     """
