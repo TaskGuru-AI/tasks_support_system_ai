@@ -60,6 +60,9 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
       MINIO_BROWSER_REDIRECT_URL: "https://minio.pyrogn.ru"
       MINIO_SERVER_URL: "https://s3.pyrogn.ru"
+      MINIO_LOGGER: "console"
+      MINIO_HTTP_TRACE: "/dev/stdout"
+      MINIO_API_LOG_LEVEL: "debug"
     command: server /data --console-address ":9001"
     profiles:
       - production
