@@ -1,9 +1,11 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-from fastapi import UploadFile, File
+
 from tasks_support_system_ai.api.models.common import SuccessResponse
 from tasks_support_system_ai.api.models.nlp import (
     ClassificationReport,
@@ -48,7 +50,7 @@ async def get_statistics(id: str):
                 key: ClassMetrics(**value)
                 for key, value in classification_report_data.items()
                 if isinstance(value, dict)
-                   and key not in ["accuracy", "macro avg", "weighted avg", "roc_auc"]
+                and key not in ["accuracy", "macro avg", "weighted avg", "roc_auc"]
             },
         )
     except Exception as e:
@@ -70,7 +72,10 @@ async def predict_nlp(request: TextPredictionRequest):
     try:
         loop = asyncio.get_event_loop()
         clusters = await loop.run_in_executor(
-            executor, nlp_predictor.predict, request.id, request.text,
+            executor,
+            nlp_predictor.predict,
+            request.id,
+            request.text,
         )
         return ClustersResponse(clusters=clusters)
     except Exception as e:
@@ -79,21 +84,21 @@ async def predict_nlp(request: TextPredictionRequest):
 
 
 @router.post("/api/predict_nlp_csv")
-async def predict_nlp_file(id: str, file: UploadFile=File(description="CSV file with data")) -> StreamingResponse:
+async def predict_nlp_file(
+    id: str, file: Annotated[UploadFile, File(description="CSV file with data")]
+) -> StreamingResponse:
     try:
         df = await upload_file(file)
 
         loop = asyncio.get_event_loop()
-        data = await loop.run_in_executor(
-            executor, nlp_predictor.predict_for_file, id, df
-        )
+        data = await loop.run_in_executor(executor, nlp_predictor.predict_for_file, id, df)
         output = StringIO()
         data.to_csv(output, index=False)
         output.seek(0)
         return StreamingResponse(
             output,
             media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename=predictions.csv"}
+            headers={"Content-Disposition": "attachment; filename=predictions.csv"},
         )
     except Exception as e:
         logger.error(e, exc_info=True)

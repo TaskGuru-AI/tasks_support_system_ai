@@ -24,9 +24,11 @@ class TextPredictionRequest(BaseModel):
     id: str
     text: str
 
+
 class FilePredictionRequest(BaseModel):
     id: str
     file: UploadFile
+
 
 class ModelResponse(BaseModel):
     """
