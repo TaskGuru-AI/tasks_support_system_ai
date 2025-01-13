@@ -1,0 +1,27 @@
+name: Prevent Merge Commits
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Fetch main branch
+        run: git fetch origin main
+
+      - name: Find Merge Commits
+        run: |
+          MERGE_COMMITS=$(git log --merges --pretty=format:"%h - %s" origin/main..HEAD)
+          if [ -n "$MERGE_COMMITS" ]; then
+            echo "Merge commits detected in this branch:"
+            echo "$MERGE_COMMITS"
+            exit 1
+          else
+            echo "No merge commits found. Safe to merge!"
+          fi
