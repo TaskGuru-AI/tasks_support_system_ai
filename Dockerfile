@@ -15,12 +15,13 @@ RUN pip install --no-cache-dir poetry==1.8.5
 FROM base AS deps
 COPY pyproject.toml poetry.lock README.md ./
 COPY .streamlit ./.streamlit
+COPY scripts ./scripts
 
 RUN set -e && \
     poetry config virtualenvs.create false \
     && poetry install --no-root --no-interaction --no-ansi
 
-RUN poetry run python scripts/initialize_data.py
+RUN poetry run python scripts/prefetch_data.py
 
 FROM deps AS final
 COPY tasks_support_system_ai/ ./tasks_support_system_ai/

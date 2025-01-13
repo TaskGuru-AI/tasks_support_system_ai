@@ -7,11 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 def initialize_nltk():
-    """
-    NLTK data organization:
-    - tokenizers/punkt: For sentence tokenization
-    - corpora/stopwords: For stopwords lists
-    """
+    """Packages: https://github.com/nltk/nltk_data/tree/gh-pages/packages"""
     packages = {
         "punkt": "tokenizers/punkt",
         "stopwords": "corpora/stopwords",
