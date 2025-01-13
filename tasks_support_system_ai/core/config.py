@@ -3,6 +3,8 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings
 
+import nltk
+nltk.download('stopwords')
 
 class Settings(BaseSettings):
     app_name: str = "Awesome API"
