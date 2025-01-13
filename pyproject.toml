@@ -12,7 +12,7 @@ matplotlib = "^3.9.2"
 seaborn = "^0.13.2"
 numpy = "<2.0"
 statsmodels = "^0.14.4"
-scipy = "^1.14.1"
+scipy = "<1.14.0"
 scikit-learn = "^1.5.2"
 prophet = "^1.1.6"
 catboost = "^1.2.7"
@@ -28,6 +28,8 @@ imblearn = "^0.0"
 pymorphy3 = "^2.0.2"
 nltk = "^3.9.1"
 aiofiles = "^24.1.0"
+gensim = "^4.3.3"
+
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.3"

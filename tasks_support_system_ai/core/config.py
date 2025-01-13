@@ -1,7 +1,10 @@
 import os
 from pathlib import Path
 
+import nltk
 from pydantic_settings import BaseSettings
+
+nltk.download("stopwords")
 
 
 class Settings(BaseSettings):
