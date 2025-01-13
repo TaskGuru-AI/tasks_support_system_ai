@@ -1,3 +1,5 @@
+"""Get customized tree_queue dataframe with convenient columns."""
+
 from pathlib import Path
 
 from tasks_support_system_ai.data.parse_data import (

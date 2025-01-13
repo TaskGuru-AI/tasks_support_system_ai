@@ -20,6 +20,8 @@ RUN set -e && \
     poetry config virtualenvs.create false \
     && poetry install --no-root --no-interaction --no-ansi
 
+RUN poetry run python scripts/initialize_data.py
+
 FROM deps AS final
 COPY tasks_support_system_ai/ ./tasks_support_system_ai/
 RUN poetry install --only-root --no-interaction --no-ansi
