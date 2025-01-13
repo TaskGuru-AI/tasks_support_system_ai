@@ -30,6 +30,7 @@ nltk = "^3.9.1"
 aiofiles = "^24.1.0"
 gensim = "^4.3.3"
 
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.3"
 ipykernel = "^6.29.5"
