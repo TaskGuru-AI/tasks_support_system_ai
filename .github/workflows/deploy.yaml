@@ -75,6 +75,7 @@ jobs:
                 find . -maxdepth 1 ! -name 'volumes' ! -name 'temp' ! -name '.' -exec rm -rf {} +
 
                 mv temp/* temp/.[!.]* . 2>/dev/null || true
+                ll
                 rm -rf temp
 
                 docker compose up backend -d --build
