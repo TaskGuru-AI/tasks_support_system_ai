@@ -11,17 +11,19 @@ jobs:
     steps:
       - name: Connect to Headscale
         run: |
-          curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
-          curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.tailscale-keyring.list | sudo tee /etc/apt/sources.list.d/tailscale.list
-          sudo apt-get update
-          sudo apt-get install -y tailscale
-          sudo systemctl start tailscaled
+            curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+            curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.tailscale-keyring.list | sudo tee /etc/apt/sources.list.d/tailscale.list
+            sudo apt-get update
+            sudo apt-get install -y tailscale
+            sudo systemctl start tailscaled
 
-          sudo tailscale up \
+            sudo tailscale up \
             --login-server=${{ secrets.TAILSCALE_SERVER }} \
             --authkey=${{ secrets.TAILSCALE_AUTHKEY }} \
             --accept-routes \
             --accept-dns=false
+            sleep 5
+            echo "whats up?"
 
       - name: Create deployment directory
         uses: appleboy/ssh-action@master
