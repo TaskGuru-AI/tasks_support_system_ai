@@ -23,6 +23,7 @@ jobs:
             --authkey=${{ secrets.TAILSCALE_AUTHKEY }} \
             --accept-routes \
             --accept-dns=false
+            curl -v ${{ secrets.TAILSCALE_SERVER}}
             sleep 5
             echo "whats up?"
 
