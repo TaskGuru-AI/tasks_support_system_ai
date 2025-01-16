@@ -31,6 +31,7 @@ jobs:
             done
             echo "Failed to connect to Headscale after 2 attempts"
             exit 1
+            curl -v ${{ secrets.DEPLOY_HOST }}
 
       - name: Create deployment directory
         uses: appleboy/ssh-action@master
