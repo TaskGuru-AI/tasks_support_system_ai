@@ -17,11 +17,20 @@ jobs:
             sudo apt-get install -y tailscale
             sudo systemctl start tailscaled
 
-            sudo tailscale up \
-            --login-server=${{ secrets.TAILSCALE_SERVER }} \
-            --authkey=${{ secrets.TAILSCALE_AUTHKEY }} \
-            --accept-routes \
-            --accept-dns=false
+            for i in {1..2}; do
+              echo "Attempt $i to connect to Headscale..."
+              if sudo tailscale up \
+                --login-server=${{ secrets.TAILSCALE_SERVER }} \
+                --authkey=${{ secrets.TAILSCALE_AUTHKEY }} \
+                --accept-routes \
+                --accept-dns=false; then
+                echo "Successfully connected to Headscale"
+                exit 0
+              fi
+              sleep 5
+            done
+            echo "Failed to connect to Headscale after 2 attempts"
+            exit 1
 
       - name: Create deployment directory
         uses: appleboy/ssh-action@master
