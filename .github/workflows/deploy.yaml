@@ -9,6 +9,8 @@ jobs:
   test-deploy:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Connect to Headscale
         run: |
             curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
@@ -75,7 +77,6 @@ jobs:
                 find . -maxdepth 1 ! -name 'volumes' ! -name 'temp' ! -name '.' -exec rm -rf {} +
 
                 mv temp/* temp/.[!.]* . 2>/dev/null || true
-                ll
                 rm -rf temp
 
                 docker compose up backend -d --build
