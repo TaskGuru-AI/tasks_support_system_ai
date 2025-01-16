@@ -25,6 +25,7 @@ jobs:
                 --accept-routes \
                 --accept-dns=false; then
                 echo "Successfully connected to Headscale"
+                tailscale status
                 curl -v ${{ secrets.DEPLOY_HOST }}
                 exit 0
               fi
