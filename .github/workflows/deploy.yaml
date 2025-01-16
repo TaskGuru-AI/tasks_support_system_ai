@@ -35,25 +35,20 @@ jobs:
                 TARGET_IP=$(tailscale status | grep "support" | awk '{print $1}')
                 echo "Target Tailscale IP: ${TARGET_IP}"
 
-                # Test connection using Tailscale IP directly
-                echo "Testing connection to ${TARGET_IP}..."
-                curl -v "http://${TARGET_IP}"
+                # Test SSH connection using netcat
+                echo "Testing SSH connection to ${TARGET_IP}:22..."
+                nc -zv ${TARGET_IP} 22
 
-                # Also try ping
-                echo "Trying to ping ${TARGET_IP}..."
-                ping -c 4 "${TARGET_IP}"
+                # Try ping
+                echo "Pinging target..."
+                ping -c 4 ${TARGET_IP}
 
-                # Get our Tailscale interface
-                TSIF=$(ip -o link show | grep tailscale | cut -d: -f2 | tr -d ' ')
-                echo "Tailscale interface: ${TSIF}"
-
-                # Show routing
-                echo "Routing table:"
-                ip route
-
-                # Try curl with specific interface
-                echo "Trying curl with Tailscale interface..."
-                curl --interface "${TSIF}" -v "http://${TARGET_IP}"
+                # Try SSH connection
+                echo "Testing SSH connection..."
+                ssh -v -o ConnectTimeout=10 \
+                    -o StrictHostKeyChecking=no \
+                    -i ~/.ssh/id_ed25519 \
+                    github@${TARGET_IP} "echo 'SSH test successful'"
 
                 exit 0
               fi
