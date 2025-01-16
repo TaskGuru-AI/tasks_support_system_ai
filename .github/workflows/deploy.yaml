@@ -1,0 +1,39 @@
+name: Test Deploy
+
+on:
+  push:
+    branches: [ main , test-deploy*]
+  workflow_dispatch:
+
+jobs:
+  test-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          version: '1.54.0'
+
+      - name: Generate SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Test connection and sync
+        run: |
+          # Test connection
+          ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.DEPLOY_HOST }} "echo 'Connection successful'"
+
+          # Test rsync
+          rsync -av --exclude='.git' \
+                    --exclude='.github' \
+                    --exclude='notebooks' \
+                    ./ ${{ secrets.SERVER_USERNAME }}@${{ secrets.DEPLOY_HOST }}:/opt/test-deploy/
+
+          # Verify files
+          ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.DEPLOY_HOST }} "ls -la /opt/test-deploy"
