@@ -23,15 +23,44 @@ jobs:
                 --login-server=${{ secrets.TAILSCALE_SERVER }} \
                 --authkey=${{ secrets.TAILSCALE_AUTHKEY }} \
                 --accept-routes \
-                --accept-dns=false; then
+                --accept-dns=true \
+                --hostname=github-runner; then
                 echo "Successfully connected to Headscale"
+
+                sleep 5
+                echo "Tailscale Status:"
                 tailscale status
-                curl -v ${{ secrets.DEPLOY_HOST }}
+
+                # Get the Tailscale IP of the target host
+                TARGET_IP=$(tailscale status | grep "support" | awk '{print $1}')
+                echo "Target Tailscale IP: ${TARGET_IP}"
+
+                # Test connection using Tailscale IP directly
+                echo "Testing connection to ${TARGET_IP}..."
+                curl -v "http://${TARGET_IP}"
+
+                # Also try ping
+                echo "Trying to ping ${TARGET_IP}..."
+                ping -c 4 "${TARGET_IP}"
+
+                # Get our Tailscale interface
+                TSIF=$(ip -o link show | grep tailscale | cut -d: -f2 | tr -d ' ')
+                echo "Tailscale interface: ${TSIF}"
+
+                # Show routing
+                echo "Routing table:"
+                ip route
+
+                # Try curl with specific interface
+                echo "Trying curl with Tailscale interface..."
+                curl --interface "${TSIF}" -v "http://${TARGET_IP}"
+
                 exit 0
               fi
               sleep 5
             done
-            echo "Failed to connect to Headscale after 2 attempts"
+
+            echo "Failed to connect to Headscale"
             exit 1
 
       - name: Create deployment directory
