@@ -81,7 +81,7 @@ jobs:
                 find . -type f -exec chmod 644 {} \;
                 find . -type d -exec chmod 755 {} \;
 
-                chmod +x docker-compose.yml
+                chmod +x compose.yaml
 
                 docker compose up backend -d --build
                 docker compose exec backend poetry run minio-sync pull
