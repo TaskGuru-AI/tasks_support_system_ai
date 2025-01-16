@@ -70,22 +70,14 @@ jobs:
 
                 docker compose down || true
 
-                echo "${{ secrets.ENV_FILE }}" > temp/.env
-
-                # Remove old files except volumes and temp
-                find . -maxdepth 1 ! -name 'volumes' ! -name 'temp' ! -name '.' -exec rm -rf {} +
-
-                mv temp/* temp/.[!.]* . 2>/dev/null || true
-                rm -rf temp
-
-                find . -type f -exec chmod 644 {} \;
-                find . -type d -exec chmod 755 {} \;
-
-                chmod +x compose.yaml
+                echo "${{ secrets.ENV_FILE }}" > .env
 
                 docker compose up backend -d --build
                 docker compose exec backend poetry run minio-sync pull
                 docker compose down backend
                 docker compose up backend frontend -d --build
 
+                # Clean up docker
+                docker system prune -af --filter "until=100h"
+                docker builder prune -af --filter "until=100h"
                 docker image prune -f
