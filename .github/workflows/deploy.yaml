@@ -23,39 +23,13 @@ jobs:
                 --login-server=${{ secrets.TAILSCALE_SERVER }} \
                 --authkey=${{ secrets.TAILSCALE_AUTHKEY }} \
                 --accept-routes \
-                --accept-dns=true \
-                --hostname=github-runner; then
+                --accept-dns=false; then
                 echo "Successfully connected to Headscale"
-
-                sleep 5
-                echo "Tailscale Status:"
-                tailscale status
-
-                # Get the Tailscale IP of the target host
-                TARGET_IP=$(tailscale status | grep "support" | awk '{print $1}')
-                echo "Target Tailscale IP: ${TARGET_IP}"
-
-                # Test SSH connection using netcat
-                echo "Testing SSH connection to ${TARGET_IP}:22..."
-                nc -zv ${TARGET_IP} 22
-
-                # Try ping
-                echo "Pinging target..."
-                ping -c 4 ${TARGET_IP}
-
-                # Try SSH connection
-                echo "Testing SSH connection..."
-                ssh -v -o ConnectTimeout=10 \
-                    -o StrictHostKeyChecking=no \
-                    -i ~/.ssh/id_ed25519 \
-                    github@${TARGET_IP} "echo 'SSH test successful'"
-
                 exit 0
               fi
               sleep 5
             done
-
-            echo "Failed to connect to Headscale"
+            echo "Failed to connect to Headscale after 2 attempts"
             exit 1
 
       - name: Create deployment directory
