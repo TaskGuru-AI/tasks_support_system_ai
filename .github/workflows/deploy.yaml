@@ -16,16 +16,12 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y tailscale
             sudo systemctl start tailscaled
-            curl -v ${{ secrets.TAILSCALE_SERVER}}
 
             sudo tailscale up \
             --login-server=${{ secrets.TAILSCALE_SERVER }} \
             --authkey=${{ secrets.TAILSCALE_AUTHKEY }} \
             --accept-routes \
             --accept-dns=false
-            curl -v ${{ secrets.TAILSCALE_SERVER}}
-            sleep 5
-            echo "whats up?"
 
       - name: Create deployment directory
         uses: appleboy/ssh-action@master
