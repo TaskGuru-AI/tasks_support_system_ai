@@ -11,11 +11,23 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Connect to Tailscale
-        uses: tailscale/github-action@v2
-        with:
-          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
-          version: '1.54.0'
+
+      - name: Connect to Headscale
+        run: |
+          curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+          curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.tailscale-keyring.list | sudo tee /etc/apt/sources.list.d/tailscale.list
+          sudo apt-get update
+          sudo apt-get install -y tailscale
+          sudo systemctl start tailscaled
+
+          sudo tailscale up \
+            --login-server=${{ secrets.TAILSCALE_SERVER }} \
+            --authkey=${{ secrets.TAILSCALE_AUTHKEY }} \
+            --accept-routes \
+            --accept-dns=false
+
+          sleep 5
+          tailscale status
 
       - name: Generate SSH key
         run: |
@@ -26,14 +38,11 @@ jobs:
 
       - name: Test connection and sync
         run: |
-          # Test connection
-          ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.DEPLOY_HOST }} "echo 'Connection successful'"
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "echo 'Connection successful'"
 
-          # Test rsync
           rsync -av --exclude='.git' \
                     --exclude='.github' \
                     --exclude='notebooks' \
-                    ./ ${{ secrets.SERVER_USERNAME }}@${{ secrets.DEPLOY_HOST }}:/opt/test-deploy/
+                    ./ ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/test-deploy/
 
-          # Verify files
-          ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.DEPLOY_HOST }} "ls -la /opt/test-deploy"
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "ls -la /opt/test-deploy"
