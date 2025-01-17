@@ -24,10 +24,8 @@ jobs:
               if sudo tailscale up \
                 --login-server=${{ secrets.TAILSCALE_SERVER }} \
                 --authkey=${{ secrets.TAILSCALE_AUTHKEY }} \
-                --accept-routes \
-                --accept-dns=false; then
+                --accept-routes; then
                 echo "Successfully connected to Headscale"
-                sleep 10
                 exit 0
               fi
               sleep 5
