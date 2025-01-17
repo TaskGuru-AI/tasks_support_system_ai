@@ -25,8 +25,7 @@ jobs:
                 --login-server=${{ secrets.TAILSCALE_SERVER }} \
                 --authkey=${{ secrets.TAILSCALE_AUTHKEY }} \
                 --accept-routes \
-                --accept-dns=false \
-                --ephemeral; then
+                --accept-dns=false; then
                 echo "Successfully connected to Headscale"
                 exit 0
               fi
