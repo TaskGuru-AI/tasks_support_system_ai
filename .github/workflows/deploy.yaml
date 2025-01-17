@@ -88,3 +88,7 @@ jobs:
                 docker system prune -af --filter "until=100h"
                 docker builder prune -af --filter "until=100h"
                 docker image prune -f
+
+      - name: Disconnect from Tailscale
+        if: always()
+        run: tailscale logout
