@@ -3,16 +3,18 @@ services:
     build: .
     command: poetry run uvicorn tasks_support_system_ai.main:app --host 0.0.0.0 --port 8000
     ports:
-      - "127.0.0.1:8000:8000"
+      # - "127.0.0.1:8000:8000"
+      - "8000:8000"
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
     environment:
       - LOG_LEVEL=INFO
-    env_file:
-      - ./.env
+      - POETRY_HOME=/app/.poetry
+      - POETRY_CACHE_DIR=/app/.cache
     networks:
       - app-network
+    user: "1002:1002"
     profiles:
       - app
     healthcheck:
@@ -26,12 +28,16 @@ services:
     build: .
     command: poetry run streamlit run tasks_support_system_ai/web/app.py --server.port 8501 --server.address 0.0.0.0
     ports:
-      - "127.0.0.1:8501:8501"
+      # - "127.0.0.1:8501:8501"
+      - "8501:8501"
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
     environment:
       - LOG_LEVEL=INFO
+      - POETRY_HOME=/app/.poetry
+      - POETRY_CACHE_DIR=/app/.cache
+    user: "1002:1002"
     networks:
       - app-network
     healthcheck:
@@ -65,20 +71,6 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
-
-  jenkins:
-    image: jenkins/jenkins:lts-jdk17
-    container_name: jenkins
-    restart: unless-stopped
-    ports:
-      - "50000:50000"
-      - "8081:8080"
-    volumes:
-      - ./jenkins_home:/var/jenkins_home
-    profiles:
-      - deploy
-    networks:
-      - nginx_network
 
   nginx:
     image: nginx:alpine
