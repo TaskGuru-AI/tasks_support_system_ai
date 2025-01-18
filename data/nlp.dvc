@@ -1,0 +1,6 @@
+outs:
+- md5: dd7b7d285ee289f80639a67456875572.dir
+  size: 28421708
+  nfiles: 3
+  hash: md5
+  path: nlp

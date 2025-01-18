@@ -20,9 +20,9 @@ from tasks_support_system_ai.utils.utils import get_correct_data_path
 
 
 class DataFrames(Enum):
-    TS_HIERARCHY_SOURCE = "dataset_tickets_timeseries/tree_queue.tsv"
-    TS_HIERARCHY_PARSED = "custom_data/tree_proper.csv"
-    TS_DAILY = "tickets_daily/tickets_daily.csv"
+    TS_HIERARCHY_SOURCE = "ts/daily/hierarchy/tree_queue.tsv"
+    TS_HIERARCHY_PARSED = "ts/daily/hierarchy/tree_proper.csv"
+    TS_DAILY = "ts/daily/tickets/tickets_daily.csv"
 
 
 # think that we can read dataframe not only from path, but from ReadCsvBuffer also

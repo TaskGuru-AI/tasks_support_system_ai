@@ -1,0 +1,6 @@
+outs:
+- md5: b66f897ab610aca150d57b23305ae605.dir
+  size: 39889918
+  nfiles: 8
+  hash: md5
+  path: ts
