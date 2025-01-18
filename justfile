@@ -1,5 +1,3 @@
-# TODO: add working ruff!!!
-
 # Set variables
 set windows-powershell := true
 poetry := "poetry"
@@ -94,3 +92,110 @@ pull-data:
 # Push data to MiniO
 push-data:
     poetry run minio-sync push
+
+# List branches status (Python implementation)
+list-branches:
+    #!/usr/bin/env python3
+    import subprocess
+    import sys
+
+    def get_remote_branches():
+        result = subprocess.run(['git', 'ls-remote', '--heads', 'origin'],
+                              capture_output=True, text=True)
+        return {ref.split('/')[-1] for ref in result.stdout.splitlines()}
+
+    def get_local_branches():
+        result = subprocess.run(['git', 'for-each-ref', '--format=%(refname:short)',
+                               'refs/heads/'], capture_output=True, text=True)
+        return [branch for branch in result.stdout.splitlines() if branch != 'main']
+
+    remote_branches = get_remote_branches()
+    local_branches = get_local_branches()
+
+    print("Local branches status:")
+    for branch in local_branches:
+        if branch in remote_branches:
+            print(f"🟢 {branch} (pushed to remote)")
+        else:
+            print(f"🟡 {branch} (local only)")
+
+# Clean merged branches (Python implementation)
+clean-branches:
+    #!/usr/bin/env python3
+    import subprocess
+    import sys
+
+    def get_remote_branches():
+        result = subprocess.run(['git', 'ls-remote', '--heads', 'origin'],
+                              capture_output=True, text=True)
+        return {ref.split('/')[-1] for ref in result.stdout.splitlines()}
+
+    def get_local_branches():
+        result = subprocess.run(['git', 'for-each-ref', '--format=%(refname:short)',
+                               'refs/heads/'], capture_output=True, text=True)
+        return [branch for branch in result.stdout.splitlines() if branch != 'main']
+
+    remote_branches = get_remote_branches()
+    local_branches = get_local_branches()
+
+    print("Cleaning local remote-tracking branches...")
+    subprocess.run(['git', 'fetch', '--prune'])
+
+    print("Cleaning local branches...")
+    for branch in local_branches:
+        if branch not in remote_branches:
+            print(f"🗑️  Removing {branch}")
+            subprocess.run(['git', 'branch', '-D', branch])
+        else:
+            print(f"⚠️  Skipping {branch} (local only)")
+
+# Update main and recreate current branch (Python implementation)
+recreate-branch:
+    #!/usr/bin/env python3
+    import subprocess
+    import sys
+
+    def get_current_branch():
+        result = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                              capture_output=True, text=True)
+        return result.stdout.strip()
+
+    current = get_current_branch()
+    if current == 'main':
+        print("Already on main branch")
+        sys.exit(0)
+
+    print("📦 Stashing changes...")
+    subprocess.run(['git', 'stash'])
+
+    print("🔄 Switching to main...")
+    subprocess.run(['git', 'checkout', 'main'])
+    subprocess.run(['git', 'pull', 'origin', 'main'])
+
+    print("🗑️ Removing old branch...")
+    subprocess.run(['git', 'branch', '-D', current])
+
+    print("🌱 Creating fresh branch...")
+    subprocess.run(['git', 'checkout', '-b', current])
+
+    print("📦 Applying stashed changes...")
+    subprocess.run(['git', 'stash', 'pop'])
+
+# Update main (Python implementation)
+update-main:
+    #!/usr/bin/env python3
+    import subprocess
+
+    def get_current_branch():
+        result = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                              capture_output=True, text=True)
+        return result.stdout.strip()
+
+    current = get_current_branch()
+    print("🔄 Switching to main...")
+    subprocess.run(['git', 'checkout', 'main'])
+    subprocess.run(['git', 'pull', 'origin', 'main'])
+
+    if current != 'main':
+        print(f"🔙 Switching back to {current}...")
+        subprocess.run(['git', 'checkout', current])
