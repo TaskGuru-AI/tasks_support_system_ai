@@ -39,7 +39,6 @@ jobs:
             host: ${{ secrets.DEPLOY_HOST }}
             username: ${{ secrets.SERVER_USERNAME }}
             key: ${{ secrets.DEPLOY_SSH_KEY }}
-            password: ${{ secrets.SERVER_PASSWORD }}
             script: |
                 mkdir -p ~/app
                 mkdir -p ~/app/temp
