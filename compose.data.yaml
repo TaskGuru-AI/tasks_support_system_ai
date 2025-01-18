@@ -1,0 +1,23 @@
+services:
+  minio:
+    image: minio/minio:latest
+    networks:
+      - nginx_network
+    volumes:
+      - /opt/app/volumes/minio:/data
+    expose:
+      - 9000
+      - 9001
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+      MINIO_SERVER_URL: "https://minio.pyrogn.ru"
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+networks:
+  proxy:
+    external: true

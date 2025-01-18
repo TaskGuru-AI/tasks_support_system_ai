@@ -84,14 +84,13 @@ dev-service:
 logs:
     docker compose logs -f
 
-# Pull data from MiniO
+# Pull data from data repository
 pull-data:
-    poetry run minio-sync pull
+    dvc pull
 
-
-# Push data to MiniO
+# Push data to data repository
 push-data:
-    poetry run minio-sync push
+    dvc push
 
 # List branches status (Python implementation)
 list-branches:
@@ -144,10 +143,10 @@ clean-branches:
     print("Cleaning local branches...")
     for branch in local_branches:
         if branch not in remote_branches:
-            print(f"🗑️  Removing {branch}")
+            print(f"🗑️  Removing {branch} (only local)")
             subprocess.run(['git', 'branch', '-D', branch])
         else:
-            print(f"⚠️  Skipping {branch} (local only)")
+            print(f"⚠️  Skipping {branch} (has remote branch)")
 
 # Update main and recreate current branch (Python implementation)
 recreate-branch:
