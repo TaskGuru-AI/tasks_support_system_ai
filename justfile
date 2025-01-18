@@ -138,9 +138,12 @@ clean-branches:
     remote_branches = get_remote_branches()
     local_branches = get_local_branches()
 
+    print("Cleaning local remote-tracking branches...")
+    subprocess.run(['git', 'fetch', '--prune'])
+
     print("Cleaning local branches...")
     for branch in local_branches:
-        if branch in remote_branches:
+        if branch not in remote_branches:
             print(f"🗑️  Removing {branch}")
             subprocess.run(['git', 'branch', '-D', branch])
         else:
