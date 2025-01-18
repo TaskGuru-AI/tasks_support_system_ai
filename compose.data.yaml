@@ -2,7 +2,7 @@ services:
   minio:
     image: minio/minio:latest
     networks:
-      - nginx_network
+      - proxy
     volumes:
       - /opt/app/volumes/minio:/data
     expose:
