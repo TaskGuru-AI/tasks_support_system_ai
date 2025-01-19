@@ -2,30 +2,10 @@
 set windows-powershell := true
 poetry := "poetry"
 python := poetry + " run python"
-data_dir := "data"
-output_dir := "data/custom_data"
-scripts_dir := "scripts"
-process_script := scripts_dir + "/generate_data.py"
 
 # List available recipes
 default:
     @just --list
-
-# Install dependencies
-install:
-    @echo "Installing dependencies..."
-    {{poetry}} install
-
-# Generate data
-generate_data: ensure-output-dir
-    @echo "Processing tickets data..."
-    {{python}} {{process_script}}
-    @echo "Generated files:"
-    ls -l {{output_dir}}
-
-# Ensure output directory exists
-ensure-output-dir:
-    mkdir -p {{output_dir}}
 
 # Run linting
 lint:
@@ -198,3 +178,11 @@ update-main:
     if current != 'main':
         print(f"🔙 Switching back to {current}...")
         subprocess.run(['git', 'checkout', current])
+
+# Run offline checks for project setup
+setup-offline:
+    poetry run python setup
+
+# Run full project setup with syncing data and dependencies
+setup-online:
+    poetry run python setup --online
