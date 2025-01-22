@@ -114,7 +114,7 @@ class SetupChecks:
             )
         except Exception as e:
             logger.warning(f"Poetry lock check failed: {e}")
-            logger.warning("Please run: poetry install")
+            logger.warning("Please run: poetry install --with dev")
 
     def run_dvc_pull(self):
         try:
