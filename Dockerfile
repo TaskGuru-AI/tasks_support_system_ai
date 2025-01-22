@@ -21,7 +21,7 @@ RUN set -e && \
     poetry config virtualenvs.create false \
     && poetry install --no-root --no-interaction --no-ansi
 
-RUN poetry run python scripts/prefetch_data.py
+RUN poetry run python setup --environment docker
 
 FROM deps AS final
 COPY tasks_support_system_ai/ ./tasks_support_system_ai/

@@ -6,7 +6,7 @@ services:
       - "127.0.0.1:8000:8000"
     volumes:
       - ./data:/app/data
-      - ./logs:/app/logs
+      - logs:/app/logs
     environment:
       - LOG_LEVEL=INFO
     env_file:
@@ -27,7 +27,7 @@ services:
       - "127.0.0.1:8501:8501"
     volumes:
       - ./data:/app/data
-      - ./logs:/app/logs
+      - logs:/app/logs
     environment:
       - LOG_LEVEL=INFO
     networks:
@@ -43,12 +43,6 @@ services:
         condition: service_healthy
 
 volumes:
-  minio_data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /opt/app/volumes/minio
   logs:
 
 networks:

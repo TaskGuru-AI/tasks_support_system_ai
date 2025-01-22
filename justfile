@@ -179,10 +179,6 @@ update-main:
         print(f"🔙 Switching back to {current}...")
         subprocess.run(['git', 'checkout', current])
 
-# Run offline checks for project setup
-setup-offline:
-    poetry run python setup
-
-# Run full project setup with syncing data and dependencies
-setup-online:
-    poetry run python setup --online
+# Run local setup
+setup:
+    poetry run python setup --environment local
