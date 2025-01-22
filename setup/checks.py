@@ -114,7 +114,15 @@ class SetupChecks:
             )
         except Exception as e:
             logger.warning(f"Poetry lock check failed: {e}")
-            logger.warning("Please run: poetry install --with dev")
+            try:
+                subprocess.run(
+                    ["poetry", "check", "--lock"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+            except subprocess.CalledProcessError as e:
+                self.logger.warning(f"Error while running: poetry install --with dev: {e}")
 
     def run_dvc_pull(self):
         try:
@@ -123,7 +131,10 @@ class SetupChecks:
             self.logger.warning(f"DVC pull failed: {e}")
 
     def run_checks(self):
-        """Run checks based on environment."""
+        """Run checks based on environment.
+        Локально устанаваливаем все.
+        Для докера мы уже скачали данные, установка зависимостей прописана в Dockerfile.
+        """
         checks = {
             Environment.LOCAL: [
                 self.check_commands,
@@ -136,15 +147,15 @@ class SetupChecks:
             ],
             Environment.LOCAL_DOCKER: [
                 self.check_env_files,
-                self.create_dvc_config,
-                self.check_dvc_status,
+                # self.create_dvc_config,
+                # self.check_dvc_status,
                 self.check_nltk_data,
             ],
             Environment.DEPLOY: [
                 self.check_env_files,
-                # self.create_dvc_config,
+                self.create_dvc_config,
                 # self.check_dvc_status,
-                # self.run_dvc_pull,
+                self.run_dvc_pull,
                 self.check_nltk_data,
             ],
         }

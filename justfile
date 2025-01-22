@@ -181,4 +181,4 @@ update-main:
 
 # Run local setup
 setup:
-    poetry run python setup --environment local
+    poetry run python -m setup --environment local
