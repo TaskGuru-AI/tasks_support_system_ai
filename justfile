@@ -181,4 +181,5 @@ update-main:
 
 # Run local setup
 setup:
+    poetry install --with dev
     poetry run python -m setup --environment local
