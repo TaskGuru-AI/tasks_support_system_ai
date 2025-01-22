@@ -116,7 +116,7 @@ class SetupChecks:
             logger.warning(f"Poetry lock check failed: {e}")
             try:
                 subprocess.run(
-                    ["poetry", "check", "--lock"],
+                    ["poetry", "install", "--with", "dev"],
                     capture_output=True,
                     text=True,
                     check=False,
@@ -138,11 +138,11 @@ class SetupChecks:
         checks = {
             Environment.LOCAL: [
                 self.check_commands,
+                self.check_poetry_lock,
                 self.check_env_files,
                 self.create_dvc_config,
                 self.check_dvc_status,
                 self.check_nltk_data,
-                self.check_poetry_lock,
                 self.run_dvc_pull,
             ],
             Environment.LOCAL_DOCKER: [
