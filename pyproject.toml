@@ -29,6 +29,7 @@ pymorphy3 = "^2.0.2"
 nltk = "^3.9.1"
 aiofiles = "^24.1.0"
 gensim = "^4.3.3"
+xgboost = "^2.1.4"
 
 
 [tool.poetry.group.dev.dependencies]

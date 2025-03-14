@@ -2,6 +2,7 @@ import uuid
 
 import numpy as np
 import pandas as pd
+from catboost import CatBoostClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, roc_auc_score
 from sklearn.multiclass import OneVsRestClassifier
@@ -42,8 +43,7 @@ class NLPPredictor:
 
         tokenized_text = text_preprocessor.preprocess_text(text)
         vector = [get_mean_vector(tokenized_text, self.w2v_model)]
-        prediction = model.predict(vector)
-
+        prediction = model.predict(vector).ravel()
         return prediction.tolist()
 
     def predict_for_file(self, model_id: str, df: pd.DataFrame) -> pd.DataFrame:
@@ -71,6 +71,10 @@ class NLPPredictor:
             return train_logistic_model(self.train_data, self.test_data, config)
         elif model == "svm":
             return train_svm_model(self.train_data, self.test_data, config)
+        elif model == "catboost":
+            return train_catboost_model(self.train_data, self.test_data, config)
+        elif model == "xgboost":
+            return train_xgboost_model(self.train_data, self.test_data, config)
         else:
             raise ValueError("Invalid model name")
 
@@ -145,6 +149,48 @@ def train_svm_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMConfig) 
     model_service.save_stats(model_id, report)
 
     return model_id
+
+
+def train_catboost_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMConfig) -> str:
+    """
+    Method to train a CatBoost classification model
+    :param config: Model configuration
+    Returns: str: ID model
+    """
+    X_train, y_train = train["vector"], train["cluster"]
+    X_train = vector_transform(X_train)
+
+    X_test, y_test = test["vector"], test["cluster"]
+    X_test = vector_transform(X_test)
+
+    model = CatBoostClassifier(
+        iterations=config.iterations,
+        depth=config.depth,
+        learning_rate=config.learning_rate,
+        l2_leaf_reg=config.l2_leaf_reg,
+        loss_function="MultiClass",
+        eval_metric="MultiClass",
+        verbose=0,
+    )
+    model.fit(X_train, y_train)
+    model_id = str(uuid.uuid4())
+
+    y_pred_proba = model.predict_proba(X_test)
+    y_pred = np.argmax(y_pred_proba, axis=1)
+    y_pred = y_pred + 1
+
+    roc_auc = roc_auc_score(y_test, y_pred_proba, multi_class="ovr")
+    report = classification_report(y_test, y_pred, output_dict=True, zero_division=0)
+    report["roc_auc"] = roc_auc
+
+    model_service.save(model, model_id)
+    model_service.save_stats(model_id, report)
+
+    return model_id
+
+
+def train_xgboost_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMConfig) -> str:
+    pass
 
 
 def transform_data(df, w2v_model):

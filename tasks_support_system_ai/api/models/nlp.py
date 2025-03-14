@@ -15,9 +15,22 @@ class SVMConfig(BaseModel):
     class_weight: str | dict[int, float] | None = None
 
 
+class CatBoostConfig(BaseModel):
+    iterations: int = 510
+    depth: int = 8
+    learning_rate: float = 0.09
+    l2_leaf_reg: int = 5
+
+
+class XGBoostConfig(BaseModel):
+    iterations: int = 510
+    depth: int = 8
+    learning_rate: float = 0.09
+
+
 class FitRequest(BaseModel):
-    model: Literal["logistic", "svm"]
-    config: LogisticConfig | SVMConfig
+    model: Literal["logistic", "svm", "catboost", "xgboost"]
+    config: LogisticConfig | SVMConfig | CatBoostConfig | XGBoostConfig
 
 
 class TextPredictionRequest(BaseModel):
