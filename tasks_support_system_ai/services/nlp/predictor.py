@@ -8,9 +8,18 @@ from sklearn.metrics import classification_report, roc_auc_score
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import SVC
 
+# from lightgbm import LGBMClassifier
+from xgboost import XGBClassifier
+
 # from imblearn.over_sampling import RandomOverSampler
 # from imblearn.under_sampling import RandomUnderSampler
-from tasks_support_system_ai.api.models.nlp import LogisticConfig, SVMConfig
+from tasks_support_system_ai.api.models.nlp import (
+    CatBoostConfig,
+    LightGBMConfig,
+    LogisticConfig,
+    SVMConfig,
+    XGBoostConfig,
+)
 from tasks_support_system_ai.core.logger import backend_logger as logger  # noqa: F401
 from tasks_support_system_ai.data.nlp.reader import NLPTicketsData
 from tasks_support_system_ai.services.nlp.model_service import ModelService
@@ -75,6 +84,9 @@ class NLPPredictor:
             return train_catboost_model(self.train_data, self.test_data, config)
         elif model == "xgboost":
             return train_xgboost_model(self.train_data, self.test_data, config)
+
+        elif model == "lightgbm":
+            return train_lightgbm_model(self.train_data, self.test_data, config)
         else:
             raise ValueError("Invalid model name")
 
@@ -151,7 +163,7 @@ def train_svm_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMConfig) 
     return model_id
 
 
-def train_catboost_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMConfig) -> str:
+def train_catboost_model(train: pd.DataFrame, test: pd.DataFrame, config: CatBoostConfig) -> str:
     """
     Method to train a CatBoost classification model
     :param config: Model configuration
@@ -189,7 +201,43 @@ def train_catboost_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMCon
     return model_id
 
 
-def train_xgboost_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMConfig) -> str:
+def train_xgboost_model(train: pd.DataFrame, test: pd.DataFrame, config: XGBoostConfig) -> str:
+    """
+    Method to train a XGBoost classification model
+    :param config: Model configuration
+    Returns: str: ID model
+    """
+    X_train, y_train = train["vector"], train["cluster"]
+    X_train = vector_transform(X_train)
+
+    X_test, y_test = test["vector"], test["cluster"]
+    X_test = vector_transform(X_test)
+
+    model = XGBClassifier(
+        num_class=config.num_class,
+        max_depth=config.max_depth,
+        learning_rate=config.learning_rate,
+        eval_metric="mlogloss",
+        objective="multi:softmax",
+    )
+    y_train = y_train - 1
+    y_test = y_test - 1
+    model.fit(X_train, y_train)
+    model_id = str(uuid.uuid4())
+
+    y_pred_proba = model.predict_proba(X_test)
+    y_pred = np.argmax(y_pred_proba, axis=1)
+    roc_auc = roc_auc_score(y_test, y_pred_proba, multi_class="ovr")
+    report = classification_report(y_test, y_pred, output_dict=True, zero_division=0)
+    report["roc_auc"] = roc_auc
+
+    model_service.save(model, model_id)
+    model_service.save_stats(model_id, report)
+
+    return model_id
+
+
+def train_lightgbm_model(train: pd.DataFrame, test: pd.DataFrame, config: LightGBMConfig) -> str:
     pass
 
 

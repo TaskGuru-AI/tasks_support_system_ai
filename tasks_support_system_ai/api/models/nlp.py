@@ -19,13 +19,20 @@ class CatBoostConfig(BaseModel):
     iterations: int = 510
     depth: int = 8
     learning_rate: float = 0.09
-    l2_leaf_reg: int = 5
+    l2_leaf_reg: float = 5
 
 
 class XGBoostConfig(BaseModel):
-    iterations: int = 510
-    depth: int = 8
+    max_depth: int = 8
     learning_rate: float = 0.09
+    num_boost_rows: int = 10000
+    num_class: int = 10
+
+
+class LightGBMConfig(BaseModel):
+    num_leaves: int = 31
+    max_depth: int = 8
+    l2_leaf_reg: int = 5
 
 
 class FitRequest(BaseModel):
