@@ -164,7 +164,6 @@ def train_svm_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMConfig) 
 
 
 def train_catboost_model(train: pd.DataFrame, test: pd.DataFrame, config: CatBoostConfig) -> str:
-
     """
     Method to train a CatBoost classification model
     :param config: Model configuration
@@ -200,6 +199,7 @@ def train_catboost_model(train: pd.DataFrame, test: pd.DataFrame, config: CatBoo
     model_service.save_stats(model_id, report)
 
     return model_id
+
 
 def train_xgboost_model(train: pd.DataFrame, test: pd.DataFrame, config: XGBoostConfig) -> str:
     """
