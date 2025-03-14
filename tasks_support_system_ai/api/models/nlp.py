@@ -32,7 +32,7 @@ class XGBoostConfig(BaseModel):
 class LightGBMConfig(BaseModel):
     num_leaves: int = 31
     max_depth: int = 8
-    learning_rate: float = 0.09
+    l2_leaf_reg: int = 5
 
 
 class FitRequest(BaseModel):

@@ -84,6 +84,7 @@ class NLPPredictor:
             return train_catboost_model(self.train_data, self.test_data, config)
         elif model == "xgboost":
             return train_xgboost_model(self.train_data, self.test_data, config)
+
         elif model == "lightgbm":
             return train_lightgbm_model(self.train_data, self.test_data, config)
         else:
@@ -163,6 +164,7 @@ def train_svm_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMConfig) 
 
 
 def train_catboost_model(train: pd.DataFrame, test: pd.DataFrame, config: CatBoostConfig) -> str:
+
     """
     Method to train a CatBoost classification model
     :param config: Model configuration
@@ -198,7 +200,6 @@ def train_catboost_model(train: pd.DataFrame, test: pd.DataFrame, config: CatBoo
     model_service.save_stats(model_id, report)
 
     return model_id
-
 
 def train_xgboost_model(train: pd.DataFrame, test: pd.DataFrame, config: XGBoostConfig) -> str:
     """
