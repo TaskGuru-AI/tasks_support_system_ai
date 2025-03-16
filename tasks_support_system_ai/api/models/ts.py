@@ -148,13 +148,6 @@ class AverageLoadWeekly(BaseModel):
     average_load: list[float]
 
 
-# class ForecastRequest(BaseModel):
-#     queue_id: int
-#     forecast_horizon: int
-#     granularity: TimeGranularity = TimeGranularity.DAILY
-#     include_confidence_intervals: bool = False
-
-
 class ForecastResult(BaseModel):
     queue_id: int
     forecast_values: list[float]
