@@ -40,6 +40,11 @@ class ForecastRequest(BaseModel):
     model_type: ForecastModelType = Field(
         ForecastModelType.NAIVE, description="Тип модели для прогноза"
     )
+    train_start_date: str | None = Field(None, description="Начало периода обучения (YYYY-MM-DD)")
+    train_end_date: str | None = Field(None, description="Конец периода обучения (YYYY-MM-DD)")
+    forecast_start_date: str | None = Field(
+        None, description="Начало периода прогноза (YYYY-MM-DD)"
+    )
 
 
 class ForecastResponse(BaseModel):

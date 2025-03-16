@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Literal
 
@@ -103,26 +104,36 @@ class TSPredictor:
         else:
             raise ValueError(f"Unknown model type: {model_type}")
 
-    def train_model(
+    def train_model(  # noqa: PLR0913
         self,
         queue_id: int,
         model_type: ModelType = "naive",
-        train_test_split: float = 0.8,
         forecast_horizon: int = 30,
+        train_start_date: datetime | None = None,
+        train_end_date: datetime | None = None,
+        forecast_start_date: datetime | None = None,
     ) -> tuple[object, ModelMetrics]:
         """
-        Обучение модели прогнозирования временного ряда - синхронная версия
+        Обучение модели прогнозирования временного ряда с явным указанием периодов
         """
         try:
-            # Получаем данные
-            ts = self.get_historical_data(queue_id)
+            # Получаем данные для обучения
+            train_start_str = train_start_date.strftime("%Y-%m-%d") if train_start_date else None
+            train_end_str = train_end_date.strftime("%Y-%m-%d") if train_end_date else None
 
-            # Разделяем на обучающую и тестовую выборки
-            train_len = int(len(ts) * train_test_split)
-            train_ts = ts[:train_len]
-            test_ts = ts[train_len:]
+            # Получаем данные для обучения
+            train_ts = self.get_historical_data(queue_id, train_start_str, train_end_str)
 
-            forecast_horizon = min(len(test_ts), forecast_horizon)
+            # Получаем данные для валидации
+            if forecast_start_date:
+                forecast_end_date = forecast_start_date + timedelta(days=forecast_horizon)
+                forecast_start_str = forecast_start_date.strftime("%Y-%m-%d")
+                forecast_end_str = forecast_end_date.strftime("%Y-%m-%d")
+
+                # Получаем данные для тестирования/валидации
+                test_ts = self.get_historical_data(queue_id, forecast_start_str, forecast_end_str)
+            else:
+                test_ts = None
 
             # Выбираем и обучаем модель
             model = self._create_model(model_type, output_chunk_length=forecast_horizon)
@@ -130,14 +141,14 @@ class TSPredictor:
             # Обучение модели
             model.fit(train_ts)
 
-            # Прогнозирование и оценка метрик
-            if len(test_ts) > 0:
-                pred_ts = model.predict(forecast_horizon)
+            # Расчет метрик, если есть тестовые данные
+            if test_ts and len(test_ts) > 0:
+                pred_ts = model.predict(len(test_ts))
 
                 # Расчет метрик
-                rmse_val = rmse(test_ts[:forecast_horizon], pred_ts)
-                mae_val = mae(test_ts[:forecast_horizon], pred_ts)
-                mape_val = mape(test_ts[:forecast_horizon], pred_ts)
+                rmse_val = rmse(test_ts, pred_ts)
+                mae_val = mae(test_ts, pred_ts)
+                mape_val = mape(test_ts, pred_ts)
 
                 metrics = ModelMetrics(
                     rmse_val=float(rmse_val),
@@ -151,8 +162,12 @@ class TSPredictor:
                     rmse_val=0.0, mae_val=0.0, mape_val=0.0, model_type=model_type
                 )
 
-            # Сохраняем модель
-            self.trained_models[(queue_id, model_type)] = model
+            # Сохраняем модель с ключом, который включает информацию о периодах
+            key = (queue_id, model_type)
+            if forecast_start_date:
+                key = (queue_id, model_type, forecast_start_date.strftime("%Y-%m-%d"))
+
+            self.trained_models[key] = model
 
             return model, metrics
 
@@ -162,30 +177,53 @@ class TSPredictor:
             raise
 
     def predict_ts(
-        self, queue_id: int, forecast_horizon: int, model_type: ModelType = "naive"
+        self,
+        queue_id: int,
+        forecast_horizon: int,
+        model_type: ModelType = "naive",
+        forecast_start_date=None,
     ) -> TimeSeries:
-        """
-        Выполнение прогнозирования временного ряда с заданной даты
-        """
-        # Проверяем, есть ли обученная модель
-        model_key = (queue_id, model_type)
-        if model_key not in self.trained_models:
-            logger.info(f"Model for queue {queue_id} not found. Training new {model_type} model...")
-            self.train_model(queue_id, model_type, forecast_horizon=forecast_horizon)
+        """Выполнение прогнозирования временного ряда с заданной даты"""
+        try:
+            model_key = (queue_id, model_type)
+            if forecast_start_date:
+                model_key = (queue_id, model_type, forecast_start_date.strftime("%Y-%m-%d"))
 
-        # Получаем модель
-        model = self.trained_models[model_key]
+            if model_key not in self.trained_models:
+                logger.info(
+                    f"Model for queue {queue_id} not found. Training new {model_type} model..."
+                )
+                self.train_model(
+                    queue_id,
+                    model_type,
+                    forecast_horizon=forecast_horizon,
+                    forecast_start_date=forecast_start_date,
+                )
 
-        # Получаем исторические данные
-        ts = self.get_historical_data(queue_id)
+            model = self.trained_models[model_key]
 
-        # Переобучаем модель на всех данных
-        model.fit(ts)
+            forecast_ts = model.predict(forecast_horizon)
+            # для катбуста плывут индексы из-за своей логики
+            if model_type == "catboost" and forecast_start_date:
+                import pandas as pd
+                from darts import TimeSeries
 
-        # Выполняем прогноз
-        forecast_ts = model.predict(forecast_horizon)
+                forecast_values = forecast_ts.values().flatten()
 
-        return forecast_ts
+                correct_index = pd.date_range(
+                    start=forecast_start_date, periods=forecast_horizon, freq="D"
+                )
+
+                df = pd.DataFrame({"new_tickets": forecast_values}, index=correct_index)
+                forecast_ts = TimeSeries.from_dataframe(df)
+            logger.info(f"Corrected CatBoost forecast to start from {forecast_start_date}")
+
+            return forecast_ts
+
+        except Exception as e:
+            logger.error(f"Error in predict_ts: {str(e)}")
+            logger.exception("Exception details")
+            raise
 
     def get_all_models_predictions(
         self, queue_id: int, forecast_horizon: int

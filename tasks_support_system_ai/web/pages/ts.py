@@ -465,30 +465,49 @@ def create_forecast_tab():  # noqa
         "linear": "Линейная регрессия",
     }
 
-    # Получаем исторические данные
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=history_days)
+    # Фиксированная дата для демонстрации
+    train_start_date = datetime(2019, 9, 1)
+    forecast_start_date = datetime(2020, 1, 1)
+    forecast_end_date = forecast_start_date + timedelta(days=forecast_horizon)
 
-    historical_data = fetch_queue_data(
+    st.info(
+        f"Прогноз с {forecast_start_date.strftime('%d.%m.%Y')} на {forecast_horizon} дней вперед"
+    )
+
+    train_data = fetch_queue_data(
         queue_id,
-        start_date.strftime("%Y-%m-%d"),
-        end_date.strftime("%Y-%m-%d"),
+        train_start_date.strftime("%Y-%m-%d"),  # От самого начала
+        (forecast_start_date - timedelta(days=1)).strftime("%Y-%m-%d"),
         TimeGranularity.DAILY,
     )
 
-    # Создаем базовый график с историческими данными
+    test_data = fetch_queue_data(
+        queue_id,
+        forecast_start_date.strftime("%Y-%m-%d"),
+        forecast_end_date.strftime("%Y-%m-%d"),
+        TimeGranularity.DAILY,
+    )
+
     fig = go.Figure()
 
     fig.add_trace(
         go.Scatter(
-            x=historical_data["timestamps"],
-            y=historical_data["values"],
-            name="Исторические данные",
+            x=train_data["timestamps"],
+            y=train_data["values"],
+            name="Данные для обучения",
             line={"color": "blue"},
         )
     )
 
-    # Для каждой модели добавляем интерфейс и функциональность
+    fig.add_trace(
+        go.Scatter(
+            x=test_data["timestamps"],
+            y=test_data["values"],
+            name="Фактические данные",
+            line={"color": "black", "dash": "dot"},
+        )
+    )
+
     for i, (tab, model_type) in enumerate(zip(model_tabs, model_types)):
         with tab:
             st.markdown(f"### {model_names[model_type]}")
@@ -521,7 +540,6 @@ def create_forecast_tab():  # noqa
             with col2:
                 train_button = st.button("Обучить модель", key=f"train_{model_type}")
 
-            # Показываем метрики, если модель обучена
             if (
                 queue_id in st.session_state.model_metrics
                 and model_type in st.session_state.model_metrics[queue_id]
@@ -539,39 +557,42 @@ def create_forecast_tab():  # noqa
             if train_button:
                 with st.spinner(f"Обучение модели {model_names[model_type]}..."):
                     try:
-                        # Отправляем запрос на обучение модели
+                        train_end_date = forecast_start_date - timedelta(days=1)
+                        train_start_date = train_end_date - timedelta(days=365)  # Год для обучения
+                        request_data = {
+                            "queue_id": queue_id,
+                            "forecast_horizon": forecast_horizon,
+                            "model_type": model_type,
+                            "train_start_date": train_start_date.strftime("%Y-%m-%d"),
+                            "train_end_date": train_end_date.strftime("%Y-%m-%d"),
+                            "forecast_start_date": forecast_start_date.strftime("%Y-%m-%d"),
+                        }
                         response = requests.post(
                             f"{api_url}/api/train_model",
-                            json={
-                                "queue_id": queue_id,
-                                "forecast_horizon": forecast_horizon,
-                                "model_type": model_type,
-                            },
+                            json=request_data,
                         )
 
                         if response.status_code == 200:  # noqa: PLR2004
                             metrics = response.json()
 
-                            # Сохраняем метрики
                             if queue_id not in st.session_state.model_metrics:
                                 st.session_state.model_metrics[queue_id] = {}
 
                             st.session_state.model_metrics[queue_id][model_type] = metrics
 
-                            # Получаем прогноз
                             pred_response = requests.post(
                                 f"{api_url}/api/forecast",
                                 json={
                                     "queue_id": queue_id,
                                     "forecast_horizon": forecast_horizon,
                                     "model_type": model_type,
+                                    "forecast_start_date": forecast_start_date.strftime("%Y-%m-%d"),
                                 },
                             )
 
                             if pred_response.status_code == 200:  # noqa: PLR2004
                                 pred_data = pred_response.json()
 
-                                # Сохраняем данные прогноза
                                 if queue_id not in st.session_state.forecasting_models:
                                     st.session_state.forecasting_models[queue_id] = {}
 
@@ -587,7 +608,6 @@ def create_forecast_tab():  # noqa
                     except Exception as e:
                         st.error(f"Произошла ошибка: {str(e)}")
 
-    # Отображаем все прогнозы на одном графике
     if queue_id in st.session_state.forecasting_models:
         st.subheader("Сравнение прогнозов")
 
@@ -609,7 +629,6 @@ def create_forecast_tab():  # noqa
                 )
             )
 
-    # Настройка графика
     fig.update_layout(
         title=f"Прогноз для очереди {queue_id}",
         xaxis_title="Дата",
@@ -620,7 +639,6 @@ def create_forecast_tab():  # noqa
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # Таблица сравнения метрик
     if (
         queue_id in st.session_state.model_metrics
         and len(st.session_state.model_metrics[queue_id]) > 0

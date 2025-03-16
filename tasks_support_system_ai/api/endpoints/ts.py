@@ -210,10 +210,19 @@ async def upload_data(
 async def forecast(request: ForecastRequest) -> TimeSeriesData:
     """Forecast time series."""
     try:
+        forecast_date = None
+        if hasattr(request, "forecast_start_date") and request.forecast_start_date:
+            forecast_date = datetime.strptime(request.forecast_start_date, "%Y-%m-%d")
+        else:
+            forecast_date = datetime(2020, 1, 1)  # Фиксированная дата
+        print(forecast_date)
+
+        # Получаем прогноз
         forecast_ts = ts_predictor.predict_ts(
             queue_id=request.queue_id,
             forecast_horizon=request.forecast_horizon,
             model_type=request.model_type,
+            forecast_start_date=forecast_date,
         )
 
         return TimeSeriesData(
@@ -230,12 +239,29 @@ async def forecast(request: ForecastRequest) -> TimeSeriesData:
 async def train_model(request: ForecastRequest) -> ModelMetricsResponse:
     """Train a forecasting model and return metrics."""
     try:
-        # Обучение модели синхронно, без использования ProcessPoolExecutor
+        train_start = (
+            datetime.strptime(request.train_start_date, "%Y-%m-%d")
+            if request.train_start_date
+            else None
+        )
+        train_end = (
+            datetime.strptime(request.train_end_date, "%Y-%m-%d")
+            if request.train_end_date
+            else None
+        )
+        forecast_start = (
+            datetime.strptime(request.forecast_start_date, "%Y-%m-%d")
+            if request.forecast_start_date
+            else None
+        )
+
         model, metrics = ts_predictor.train_model(
             queue_id=request.queue_id,
             model_type=request.model_type,
-            train_test_split=0.8,
             forecast_horizon=request.forecast_horizon,
+            train_start_date=train_start,
+            train_end_date=train_end,
+            forecast_start_date=forecast_start,
         )
 
         return ModelMetricsResponse(
