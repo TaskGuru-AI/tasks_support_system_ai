@@ -4,7 +4,7 @@ from typing import Any, Literal
 
 import darts
 import darts.models
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class TimeGranularity(str, Enum):
@@ -17,6 +17,47 @@ class TimeGranularity(str, Enum):
 
 
 DF_TYPE = Literal["hierarchy", "tickets"]
+
+
+class ForecastModelType(str, Enum):
+    NAIVE = "naive"
+    EXPONENTIAL_SMOOTHING = "es"
+    PROPHET = "prophet"
+    CATBOOST = "catboost"
+    LINEAR = "linear"
+
+
+class ModelMetricsResponse(BaseModel):
+    model_type: ForecastModelType
+    rmse: float = Field(..., description="Root Mean Squared Error")
+    mae: float = Field(..., description="Mean Absolute Error")
+    mape: float = Field(..., description="Mean Absolute Percentage Error (%)")
+
+
+class ForecastRequest(BaseModel):
+    queue_id: int = Field(..., description="ID очереди для прогнозирования")
+    forecast_horizon: int = Field(30, description="Горизонт прогнозирования (дни)")
+    model_type: ForecastModelType = Field(
+        ForecastModelType.NAIVE, description="Тип модели для прогноза"
+    )
+
+
+class ForecastResponse(BaseModel):
+    queue_id: int
+    model_type: ForecastModelType
+    timestamps: list[str]
+    values: list[float]
+    metrics: ModelMetricsResponse | None = None
+
+
+class MultiModelForecastRequest(BaseModel):
+    queue_id: int = Field(..., description="ID очереди для прогнозирования")
+    forecast_horizon: int = Field(30, description="Горизонт прогнозирования (дни)")
+
+
+class MultiModelForecastResponse(BaseModel):
+    queue_id: int
+    forecasts: dict[ForecastModelType, ForecastResponse]
 
 
 class DataFrameResponse(BaseModel):
@@ -102,11 +143,11 @@ class AverageLoadWeekly(BaseModel):
     average_load: list[float]
 
 
-class ForecastRequest(BaseModel):
-    queue_id: int
-    forecast_horizon: int
-    granularity: TimeGranularity = TimeGranularity.DAILY
-    include_confidence_intervals: bool = False
+# class ForecastRequest(BaseModel):
+#     queue_id: int
+#     forecast_horizon: int
+#     granularity: TimeGranularity = TimeGranularity.DAILY
+#     include_confidence_intervals: bool = False
 
 
 class ForecastResult(BaseModel):

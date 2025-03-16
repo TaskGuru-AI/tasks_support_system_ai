@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
 
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import requests
 import streamlit as st
 
-from tasks_support_system_ai.api.models.ts import ForecastRequest, QueueStats, TimeGranularity
+from tasks_support_system_ai.api.models.ts import QueueStats, TimeGranularity
 from tasks_support_system_ai.core.config import settings
 from tasks_support_system_ai.core.logger import streamlit_logger as logger
 
@@ -52,7 +53,7 @@ def fetch_all_queues():
         return {"queues_by_level": {}, "total_load": 0}
 
 
-def sidebar_queue_selector():
+def sidebar_queue_selector(key_prefix="main"):
     all_queues_data = fetch_all_queues()
 
     if not all_queues_data["queues_by_level"]:
@@ -61,6 +62,7 @@ def sidebar_queue_selector():
     get_all_queues = st.sidebar.checkbox(
         f"Корневая очередь (суммарная нагрузка: {all_queues_data['total_load']})",
         value=False,
+        key=f"{key_prefix}_root_queue_checkbox",  # Добавляем уникальный ключ
     )
 
     if get_all_queues:
@@ -77,7 +79,9 @@ def sidebar_queue_selector():
         return None
 
     level_queue = st.sidebar.selectbox(
-        "Уровень очереди", options=available_levels, key="level_selector"
+        "Уровень очереди",
+        options=available_levels,
+        key=f"{key_prefix}_level_selector",  # Обновляем ключ с префиксом
     )
 
     level_queues = all_queues_data["queues_by_level"].get(str(level_queue), [])
@@ -90,13 +94,23 @@ def sidebar_queue_selector():
         "Выберите очередь",
         options=level_queues,
         format_func=lambda x: f"Очередь {x['id']} (Нагрузка: {x['load']})",
-        key="queue_selector",
+        key=f"{key_prefix}_queue_selector",  # Обновляем ключ с префиксом
     )
 
     return selected_queue
 
 
 st.session_state.data_available = check_data_availability()
+if "selected_queue" not in st.session_state:
+    st.session_state.selected_queue = None
+
+
+# Показываем выбор очереди в sidebar для всего приложения
+def update_selected_queue():
+    st.session_state.selected_queue = sidebar_queue_selector()
+
+
+update_selected_queue()
 
 
 def handle_reload():
@@ -376,7 +390,7 @@ def display_queue_stats(queue_stats: QueueStats):
         st.metric("Самый спокойный день", queue_stats.time.quietest_day.strftime("%Y-%m-%d"))
 
 
-upload_section()
+# upload_section()
 
 queues = fetch_all_queues()
 
@@ -404,139 +418,327 @@ def fetch_queue_stats(queue_id: int, start_date, end_date, granularity: TimeGran
         return None
 
 
-if queues:
-    selected_queue = sidebar_queue_selector()
+def create_forecast_tab():  # noqa
+    st.header("Прогнозирование временного ряда")
 
-    st.sidebar.markdown("### Настройки ряда")
-    start_date = datetime(2018, 1, 1) - timedelta(days=1000)
-    end_date = datetime(2018, 1, 1) + timedelta(days=1000)
-    date_range = st.sidebar.date_input(
-        "Select Date Range",
-        value=(start_date, end_date),
-        max_value=datetime.now(),
+    if "forecasting_models" not in st.session_state:
+        st.session_state.forecasting_models = {}
+
+    if "model_metrics" not in st.session_state:
+        st.session_state.model_metrics = {}
+
+    if not st.session_state.selected_queue:
+        st.warning("Пожалуйста, выберите очередь в боковой панели")
+        return
+    selected_queue = st.session_state.selected_queue
+
+    queue_id = selected_queue["id"]
+
+    # Настройки прогнозирования
+    st.sidebar.markdown("### Настройки прогнозирования")
+    forecast_horizon = st.sidebar.slider("Горизонт прогнозирования (дни)", 7, 365, 30)
+
+    # Выбор временного интервала для отображения
+    col1, col2 = st.columns(2)
+    with col1:
+        history_days = st.slider("Исторический период (дни)", 7, 365, 90)
+
+    # Панель моделей
+    st.subheader("Выбор модели прогнозирования")
+
+    model_tabs = st.tabs(
+        [
+            "Наивная модель",
+            "Экспоненциальное сглаживание",
+            "Prophet",
+            "CatBoost",
+            "Линейная регрессия",
+        ]
     )
-    if len(date_range) == 2:  # noqa: PLR2004
-        start_date, end_date = date_range
-    elif len(date_range) == 1:
-        start_date = date_range[0]
 
-    GRANULARITY_DISPLAY = {
-        "[D] Daily": TimeGranularity.DAILY,
-        "[W] Weekly": TimeGranularity.WEEKLY,
-        "[M] Monthly": TimeGranularity.MONTHLY,
+    model_types = ["naive", "es", "prophet", "catboost", "linear"]
+    model_names = {
+        "naive": "Наивная модель",
+        "es": "Экспоненциальное сглаживание",
+        "prophet": "Prophet",
+        "catboost": "CatBoost",
+        "linear": "Линейная регрессия",
     }
 
-    selected_granularity = st.sidebar.selectbox(
-        "Time Granularity", options=list(GRANULARITY_DISPLAY.keys()), key="granularity"
+    # Получаем исторические данные
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=history_days)
+
+    historical_data = fetch_queue_data(
+        queue_id,
+        start_date.strftime("%Y-%m-%d"),
+        end_date.strftime("%Y-%m-%d"),
+        TimeGranularity.DAILY,
     )
-    granularity = GRANULARITY_DISPLAY[selected_granularity]
 
-    st.sidebar.markdown("### Настройки прогноза")
-    days_ahead = st.sidebar.slider("Горизонт прогноза", 1, 300, 25)
-    show_prediction = st.sidebar.checkbox("Показать прогноз", value=False)
+    # Создаем базовый график с историческими данными
+    fig = go.Figure()
 
-    if selected_queue["id"] == 0:
-        st.markdown("### Статистика для общей нагрузки пока не реализована")
-    else:
-        queue_stats = fetch_queue_stats(
-            queue_id=selected_queue["id"],
-            start_date=start_date,
-            end_date=end_date,
-            granularity=granularity,
+    fig.add_trace(
+        go.Scatter(
+            x=historical_data["timestamps"],
+            y=historical_data["values"],
+            name="Исторические данные",
+            line={"color": "blue"},
         )
-        display_queue_stats(queue_stats)
-    if selected_queue:
-        try:
-            # EDA PART
-            # make plot
-            # make table with hierarchy stats
-            # make table with time series stats
+    )
 
-            hist_data = fetch_queue_data(
-                selected_queue["id"],
-                start_date,
-                end_date,
-                granularity,
-            )
-            fig = go.Figure()
+    # Для каждой модели добавляем интерфейс и функциональность
+    for i, (tab, model_type) in enumerate(zip(model_tabs, model_types)):
+        with tab:
+            st.markdown(f"### {model_names[model_type]}")
 
+            col1, col2 = st.columns([3, 1])
+
+            with col1:
+                st.markdown("Описание модели:")
+                if model_type == "naive":
+                    st.info(
+                        "Наивная сезонная модель использует повторение последнего сезонного паттерна. Простая, но эффективная для данных с явной сезонностью."  # noqa: E501
+                    )
+                elif model_type == "es":
+                    st.info(
+                        "Экспоненциальное сглаживание учитывает тренд и сезонность, давая больший вес недавним наблюдениям. Хорошо работает для данных с относительно стабильным поведением."  # noqa: E501
+                    )
+                elif model_type == "prophet":
+                    st.info(
+                        "Prophet - модель от Facebook, спроектированная для обработки сезонных данных с выбросами. Хорошо справляется с отсутствующими данными и изменениями трендов."  # noqa: E501
+                    )
+                elif model_type == "catboost":
+                    st.info(
+                        "CatBoost - градиентный бустинг деревьев решений с использованием временных признаков. Отлично обнаруживает нелинейные зависимости."  # noqa: E501
+                    )
+                elif model_type == "linear":
+                    st.info(
+                        "Линейная регрессия с временными признаками - простая, но эффективная модель для рядов с линейным трендом."  # noqa: E501
+                    )
+
+            with col2:
+                train_button = st.button("Обучить модель", key=f"train_{model_type}")
+
+            # Показываем метрики, если модель обучена
+            if (
+                queue_id in st.session_state.model_metrics
+                and model_type in st.session_state.model_metrics[queue_id]
+            ):
+                metrics = st.session_state.model_metrics[queue_id][model_type]
+
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("RMSE", f"{metrics['rmse']:.2f}")
+                with col2:
+                    st.metric("MAE", f"{metrics['mae']:.2f}")
+                with col3:
+                    st.metric("MAPE", f"{metrics['mape']:.2f}%")
+
+            if train_button:
+                with st.spinner(f"Обучение модели {model_names[model_type]}..."):
+                    try:
+                        # Отправляем запрос на обучение модели
+                        response = requests.post(
+                            f"{api_url}/api/train_model",
+                            json={
+                                "queue_id": queue_id,
+                                "forecast_horizon": forecast_horizon,
+                                "model_type": model_type,
+                            },
+                        )
+
+                        if response.status_code == 200:  # noqa: PLR2004
+                            metrics = response.json()
+
+                            # Сохраняем метрики
+                            if queue_id not in st.session_state.model_metrics:
+                                st.session_state.model_metrics[queue_id] = {}
+
+                            st.session_state.model_metrics[queue_id][model_type] = metrics
+
+                            # Получаем прогноз
+                            pred_response = requests.post(
+                                f"{api_url}/api/forecast",
+                                json={
+                                    "queue_id": queue_id,
+                                    "forecast_horizon": forecast_horizon,
+                                    "model_type": model_type,
+                                },
+                            )
+
+                            if pred_response.status_code == 200:  # noqa: PLR2004
+                                pred_data = pred_response.json()
+
+                                # Сохраняем данные прогноза
+                                if queue_id not in st.session_state.forecasting_models:
+                                    st.session_state.forecasting_models[queue_id] = {}
+
+                                st.session_state.forecasting_models[queue_id][model_type] = (
+                                    pred_data
+                                )
+
+                                st.success(f"Модель {model_names[model_type]} успешно обучена!")
+                                st.rerun()
+                        else:
+                            st.error(f"Ошибка при обучении модели: {response.text}")
+
+                    except Exception as e:
+                        st.error(f"Произошла ошибка: {str(e)}")
+
+    # Отображаем все прогнозы на одном графике
+    if queue_id in st.session_state.forecasting_models:
+        st.subheader("Сравнение прогнозов")
+
+        colors = {
+            "naive": "red",
+            "es": "green",
+            "prophet": "orange",
+            "catboost": "purple",
+            "linear": "brown",
+        }
+
+        for model_type, pred_data in st.session_state.forecasting_models[queue_id].items():
             fig.add_trace(
                 go.Scatter(
-                    x=hist_data["timestamps"],
-                    y=hist_data["values"],
-                    name="Исторические данные",
-                    line={"color": "blue"},
+                    x=pred_data["timestamps"],
+                    y=pred_data["values"],
+                    name=f"Прогноз ({model_names[model_type]})",
+                    line={"color": colors[model_type]},
                 )
             )
 
-            # # Time series plot
-            # st.plotly_chart(create_time_series_plot(df, granularity))
+    # Настройка графика
+    fig.update_layout(
+        title=f"Прогноз для очереди {queue_id}",
+        xaxis_title="Дата",
+        yaxis_title="Количество тикетов",
+        hovermode="x unified",
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
+    )
 
-            # Weekday distribution (only for daily data)
-            if granularity is TimeGranularity.DAILY:
-                st.plotly_chart(
-                    create_weekday_distribution(selected_queue["id"], start_date, end_date)
-                )
+    st.plotly_chart(fig, use_container_width=True)
 
-            # if len(df) > 14:  # Minimum required for decomposition
-            #     decomposition = seasonal_decompose(df["value"], period=7)
+    # Таблица сравнения метрик
+    if (
+        queue_id in st.session_state.model_metrics
+        and len(st.session_state.model_metrics[queue_id]) > 0
+    ):
+        st.subheader("Сравнение метрик моделей")
 
-            #     fig = go.Figure()
-            #     fig.add_trace(go.Scatter(x=df.index, y=decomposition.trend, name="Trend"))
-            #     fig.add_trace(go.Scatter(x=df.index, y=decomposition.seasonal, name="Seasonal"))
-            #     fig.add_trace(go.Scatter(x=df.index, y=decomposition.resid, name="Residual"))
-            #     fig.update_layout(title="Time Series Decomposition")
-            #     st.plotly_chart(fig)
-
-            # # Queue structure visualization
-            # structure = fetch_queue_structure(selected_queue["id"])
-            # st.subheader("Queue Structure")
-            # st.json(structure)  # You might want to create a better visualization
-
-            # # Top subqueues stacked plot
-            # # Assuming you have an endpoint that returns subqueue data
-            # subqueues_data = fetch_subqueues_data(
-            #     selected_queue["id"]
-            # )  # You'll need to implement this
-            # if subqueues_data:
-            #     st.plotly_chart(create_subqueues_stack_plot(subqueues_data))
-
-            if show_prediction:
-                with st.spinner("Генерация прогноза..."):
-                    pred_response = requests.post(
-                        f"{api_url}/api/forecast",
-                        json=ForecastRequest(
-                            queue_id=selected_queue["id"],
-                            forecast_horizon=days_ahead,
-                        ).model_dump(),
-                    )
-                    pred_data = pred_response.json()
-
-                    fig.add_trace(
-                        go.Scatter(
-                            x=pred_data["timestamps"],
-                            y=pred_data["values"],
-                            name="Прогноз",
-                            line={"color": "red"},
-                        )
-                    )
-
-            fig.update_layout(
-                title=f"Queue {selected_queue['id']} - Исторически данные",
-                xaxis_title="Date",
-                yaxis_title="Number of Tickets",
-                hovermode="x unified",
+        metrics_data = []
+        for model_type, metrics in st.session_state.model_metrics[queue_id].items():
+            metrics_data.append(
+                {
+                    "Модель": model_names[model_type],
+                    "RMSE": f"{metrics['rmse']:.2f}",
+                    "MAE": f"{metrics['mae']:.2f}",
+                    "MAPE (%)": f"{metrics['mape']:.2f}",
+                }
             )
 
-            # ML part
-            # TODO: add models to choose, some parameters and hyperparameters
-            # models could be reused
+        metrics_df = pd.DataFrame(metrics_data)  # move pandas out of here
+        st.dataframe(metrics_df, use_container_width=True)
 
-            st.plotly_chart(fig, use_container_width=True)
+    # Кнопка для очистки моделей
+    st.sidebar.markdown("### Управление моделями")
+    if st.sidebar.button("Очистить все модели"):
+        try:
+            response = requests.delete(f"{api_url}/api/clear_models/{queue_id}")
+            if response.status_code == 200:  # noqa: PLR2004
+                st.session_state.forecasting_models.pop(queue_id, None)
+                st.session_state.model_metrics.pop(queue_id, None)
+                st.success("Модели успешно очищены")
+                st.rerun()
+            else:
+                st.error(f"Ошибка при очистке моделей: {response.text}")
+        except Exception as e:
+            st.error(f"Произошла ошибка: {str(e)}")
 
-        except requests.exceptions.RequestException as e:
-            logger.error(e)
-            st.error(f"Error fetching data: {str(e)}")
-else:
-    logger.error("No queues available")
-    st.error("No queues available")
+
+tab1, tab2, tab3 = st.tabs(["Анализ очереди", "Загрузка данных", "Прогнозирование"])
+
+
+with tab2:
+    upload_section()
+
+with tab3:
+    create_forecast_tab()
+with tab1:
+    if queues and st.session_state.selected_queue:
+        selected_queue = st.session_state.selected_queue
+
+        st.sidebar.markdown("### Настройки ряда")
+        start_date = datetime(2018, 1, 1) - timedelta(days=1000)
+        end_date = datetime(2018, 1, 1) + timedelta(days=1000)
+        date_range = st.sidebar.date_input(
+            "Select Date Range",
+            value=(start_date, end_date),
+            max_value=datetime.now(),
+        )
+        if len(date_range) == 2:  # noqa: PLR2004
+            start_date, end_date = date_range
+        elif len(date_range) == 1:
+            start_date = date_range[0]
+
+        GRANULARITY_DISPLAY = {
+            "[D] Daily": TimeGranularity.DAILY,
+            "[W] Weekly": TimeGranularity.WEEKLY,
+            "[M] Monthly": TimeGranularity.MONTHLY,
+        }
+
+        selected_granularity = st.sidebar.selectbox(
+            "Time Granularity", options=list(GRANULARITY_DISPLAY.keys()), key="granularity"
+        )
+        granularity = GRANULARITY_DISPLAY[selected_granularity]
+
+        if selected_queue["id"] == 0:
+            st.markdown("### Статистика для общей нагрузки пока не реализована")
+        else:
+            queue_stats = fetch_queue_stats(
+                queue_id=selected_queue["id"],
+                start_date=start_date,
+                end_date=end_date,
+                granularity=granularity,
+            )
+            display_queue_stats(queue_stats)
+        if selected_queue:
+            try:
+                hist_data = fetch_queue_data(
+                    selected_queue["id"],
+                    start_date,
+                    end_date,
+                    granularity,
+                )
+                fig = go.Figure()
+
+                fig.add_trace(
+                    go.Scatter(
+                        x=hist_data["timestamps"],
+                        y=hist_data["values"],
+                        name="Исторические данные",
+                        line={"color": "blue"},
+                    )
+                )
+
+                if granularity is TimeGranularity.DAILY:
+                    st.plotly_chart(
+                        create_weekday_distribution(selected_queue["id"], start_date, end_date)
+                    )
+
+                fig.update_layout(
+                    title=f"Queue {selected_queue['id']} - Исторически данные",
+                    xaxis_title="Date",
+                    yaxis_title="Number of Tickets",
+                    hovermode="x unified",
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+
+            except requests.exceptions.RequestException as e:
+                logger.error(e)
+                st.error(f"Error fetching data: {str(e)}")
+    else:
+        logger.error("No queues available")
+        st.error("No queues available")

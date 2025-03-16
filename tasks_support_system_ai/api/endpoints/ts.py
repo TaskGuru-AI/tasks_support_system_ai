@@ -15,6 +15,8 @@ from tasks_support_system_ai.api.models.ts import (
     AverageLoadWeekly,
     DataFrameResponse,
     ForecastRequest,
+    ModelMetricsResponse,
+    MultiModelForecastRequest,
     QueueStats,
     ResponseBool,
     TimeGranularity,
@@ -160,26 +162,6 @@ async def get_queue_stats(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/forecast")
-async def forecast(request: ForecastRequest) -> TimeSeriesData:
-    """Forecast time series."""
-    loop = asyncio.get_event_loop()
-    forecast_ts = await loop.run_in_executor(
-        executor, ts_predictor.predict_ts, request.queue_id, request.forecast_horizon
-    )
-    return TimeSeriesData(
-        queue_id=request.queue_id,
-        timestamps=forecast_ts.time_index.strftime("%Y-%m-%d").tolist(),
-        values=forecast_ts.values().flatten().tolist(),
-        # data=dict(
-        #     zip(
-        #         forecast_ts.time_index.strftime("%Y-%m-%d").tolist(),
-        #         forecast_ts.values().flatten().tolist(),
-        #     )
-        # ),
-    )
-
-
 @router.get("/api/sample_data")
 async def get_sample_data(
     df_type: Annotated[DF_TYPE, "Тип данных (тикеты или иерархия)"],
@@ -222,3 +204,77 @@ async def upload_data(
         return BaseResponse(message="Data updated successfully", status="success")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/forecast")
+async def forecast(request: ForecastRequest) -> TimeSeriesData:
+    """Forecast time series."""
+    try:
+        forecast_ts = ts_predictor.predict_ts(
+            queue_id=request.queue_id,
+            forecast_horizon=request.forecast_horizon,
+            model_type=request.model_type,
+        )
+
+        return TimeSeriesData(
+            queue_id=request.queue_id,
+            timestamps=forecast_ts.time_index.strftime("%Y-%m-%d").tolist(),
+            values=forecast_ts.values().flatten().tolist(),
+        )
+    except Exception as e:
+        logger.error(f"Error generating forecast: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error generating forecast: {str(e)}")
+
+
+@router.post("/api/train_model")
+async def train_model(request: ForecastRequest) -> ModelMetricsResponse:
+    """Train a forecasting model and return metrics."""
+    try:
+        # Обучение модели синхронно, без использования ProcessPoolExecutor
+        model, metrics = ts_predictor.train_model(
+            queue_id=request.queue_id,
+            model_type=request.model_type,
+            train_test_split=0.8,
+            forecast_horizon=request.forecast_horizon,
+        )
+
+        return ModelMetricsResponse(
+            model_type=request.model_type, rmse=metrics.rmse, mae=metrics.mae, mape=metrics.mape
+        )
+    except Exception as e:
+        logger.error(f"Error training model: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error training model: {str(e)}")
+
+
+@router.post("/api/compare_models")
+async def compare_models(request: MultiModelForecastRequest) -> dict[str, ModelMetricsResponse]:
+    """Compare different forecasting models for a given queue."""
+    loop = asyncio.get_event_loop()
+    results = await loop.run_in_executor(
+        executor,
+        ts_predictor.get_all_models_predictions,
+        request.queue_id,
+        request.forecast_horizon,
+    )
+
+    metrics_dict = {}
+    for model_type, (_, metrics) in results.items():
+        metrics_dict[model_type] = ModelMetricsResponse(
+            model_type=model_type, rmse=metrics.rmse, mae=metrics.mae, mape=metrics.mape
+        )
+
+    return metrics_dict
+
+
+@router.delete("/api/clear_models/{queue_id}")
+async def clear_models(queue_id: int) -> BaseResponse:
+    """Clear models for a specific queue to free up memory."""
+    ts_predictor.clear_models(queue_id)
+    return BaseResponse(status="success", message=f"Models for queue {queue_id} cleared")
+
+
+@router.delete("/api/clear_all_models")
+async def clear_all_models() -> BaseResponse:
+    """Clear all trained models to free up memory."""
+    ts_predictor.clear_models()
+    return BaseResponse(status="success", message="All models cleared")
