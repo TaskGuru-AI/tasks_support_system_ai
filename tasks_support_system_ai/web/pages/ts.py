@@ -441,7 +441,8 @@ def create_forecast_tab():  # noqa
     # Выбор временного интервала для отображения
     col1, col2 = st.columns(2)
     with col1:
-        history_days = st.slider("Исторический период (дни)", 7, 365, 90)
+        ...
+        # history_days = st.slider("Исторический период (дни)", 7, 365, 90)
 
     # Панель моделей
     st.subheader("Выбор модели прогнозирования")
