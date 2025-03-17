@@ -10,8 +10,9 @@ backend_url = "http://backend:8000/nlp" if settings.is_docker else "http://local
 def select_model():
     st.title("Обучение модели NLP")
     model_type = st.sidebar.selectbox(
-        "Выберите модель для обучения:", ["Logistic Regression", "SVM",
-                                          "Catboost", "XGBoost", "LightGBM"], key="model_sb"
+        "Выберите модель для обучения:",
+        ["Logistic Regression", "SVM", "Catboost", "XGBoost", "LightGBM"],
+        key="model_sb",
     )
     config = {}
     if model_type == "Logistic Regression":
@@ -23,27 +24,42 @@ def select_model():
         }
     elif model_type == "Catboost":
         config = {
-            "iterations": st.sidebar.number_input("Итерации", min_value=100, max_value=1000, value=100),
+            "iterations": st.sidebar.number_input(
+                "Итерации", min_value=100, max_value=1000, value=100
+            ),
             "depth": st.sidebar.slider("Глубина", min_value=3, max_value=16, value=8),
-            "learning_rate": st.sidebar.number_input("Learning Rate", min_value=0.01, max_value=1.0, value=0.09,
-                                                     step=0.01),
-            "l2_leaf_reg": st.sidebar.number_input("L2 Leaf Reg", min_value=1, max_value=10, value=5),
+            "learning_rate": st.sidebar.number_input(
+                "Learning Rate", min_value=0.01, max_value=1.0, value=0.09, step=0.01
+            ),
+            "l2_leaf_reg": st.sidebar.number_input(
+                "L2 Leaf Reg", min_value=1, max_value=10, value=5
+            ),
         }
     elif model_type == "XGBoost":
         config = {
             "max_depth": st.sidebar.slider("Глубина", min_value=3, max_value=16, value=8),
-            "learning_rate": st.sidebar.number_input("Learning Rate", min_value=0.01, max_value=1.0, value=0.09,
-                                                     step=0.01),
-            "num_boost_round": st.sidebar.number_input("Boosting Rounds", min_value=100, max_value=20000, value=10000),
-            "num_class": st.sidebar.number_input("Количество классов", min_value=2, max_value=100, value=10),
+            "learning_rate": st.sidebar.number_input(
+                "Learning Rate", min_value=0.01, max_value=1.0, value=0.09, step=0.01
+            ),
+            "num_boost_round": st.sidebar.number_input(
+                "Boosting Rounds", min_value=100, max_value=20000, value=10000
+            ),
+            "num_class": st.sidebar.number_input(
+                "Количество классов", min_value=2, max_value=100, value=10
+            ),
         }
     elif model_type == "LightGBM":
         config = {
-            "learning_rate": st.sidebar.number_input("Learning Rate", min_value=0.01, max_value=1.0, value=0.09,
-                                                     step=0.01),
-            "num_leaves": st.sidebar.number_input("Num Leaves", min_value=2, max_value=100, value=31),
+            "learning_rate": st.sidebar.number_input(
+                "Learning Rate", min_value=0.01, max_value=1.0, value=0.09, step=0.01
+            ),
+            "num_leaves": st.sidebar.number_input(
+                "Num Leaves", min_value=2, max_value=100, value=31
+            ),
             "max_depth": st.sidebar.slider("Max Depth", min_value=3, max_value=16, value=8),
-            "n_estimators": st.sidebar.number_input("N Estimators", min_value=50, max_value=500, value=100),
+            "n_estimators": st.sidebar.number_input(
+                "N Estimators", min_value=50, max_value=500, value=100
+            ),
         }
     elif model_type == "SVM":
         config["C"] = st.sidebar.slider("Параметр C (регуляризация):", 0.01, 10.0, 1.0)
@@ -67,8 +83,13 @@ def select_model():
 
         config["class_weight"] = class_weight_value
 
-    model = {"Logistic Regression": "logistic", "SVM": "svm", "Catboost": "catboost",
-             "LightGBM": "lightgbm", "XGBoost": "xgboost"}.get(model_type)
+    model = {
+        "Logistic Regression": "logistic",
+        "SVM": "svm",
+        "Catboost": "catboost",
+        "LightGBM": "lightgbm",
+        "XGBoost": "xgboost",
+    }.get(model_type)
     return model, config
 
 
