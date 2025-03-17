@@ -3,12 +3,11 @@ import uuid
 import numpy as np
 import pandas as pd
 from catboost import CatBoostClassifier
+from lightgbm import LGBMClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, roc_auc_score
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import SVC
-
-# from lightgbm import LGBMClassifier
 from xgboost import XGBClassifier
 
 # from imblearn.over_sampling import RandomOverSampler
@@ -84,7 +83,6 @@ class NLPPredictor:
             return train_catboost_model(self.train_data, self.test_data, config)
         elif model == "xgboost":
             return train_xgboost_model(self.train_data, self.test_data, config)
-
         elif model == "lightgbm":
             return train_lightgbm_model(self.train_data, self.test_data, config)
         else:
@@ -238,7 +236,42 @@ def train_xgboost_model(train: pd.DataFrame, test: pd.DataFrame, config: XGBoost
 
 
 def train_lightgbm_model(train: pd.DataFrame, test: pd.DataFrame, config: LightGBMConfig) -> str:
-    pass
+    """
+    Method to train LightGBM classification model
+    :param config: Model configuration
+    Returns: str: ID model
+    """
+    X_train, y_train = train["vector"], train["cluster"]
+    X_train = vector_transform(X_train)
+
+    X_test, y_test = test["vector"], test["cluster"]
+    X_test = vector_transform(X_test)
+
+    model = LGBMClassifier(
+        num_leaves=config.num_leaves,
+        max_depth=config.max_depth,
+        learning_rate=config.learning_rate,
+        n_estimators=config.n_estimators,
+        num_classes=10,
+        metric="multi_logloss",
+        objective="multiclass",
+        verbose=-1,
+    )
+    y_train = y_train - 1
+    y_test = y_test - 1
+    model.fit(X_train, y_train)
+    model_id = str(uuid.uuid4())
+
+    y_pred_proba = model.predict_proba(X_test)
+    y_pred = np.argmax(y_pred_proba, axis=1)
+    roc_auc = roc_auc_score(y_test, y_pred_proba, multi_class="ovr")
+    report = classification_report(y_test, y_pred, output_dict=True, zero_division=0)
+    report["roc_auc"] = roc_auc
+
+    model_service.save(model, model_id)
+    model_service.save_stats(model_id, report)
+
+    return model_id
 
 
 def transform_data(df, w2v_model):
