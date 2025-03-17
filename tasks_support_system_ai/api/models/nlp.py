@@ -30,14 +30,15 @@ class XGBoostConfig(BaseModel):
 
 
 class LightGBMConfig(BaseModel):
+    learning_rate: float = 0.09
     num_leaves: int = 31
     max_depth: int = 8
-    l2_leaf_reg: int = 5
+    n_estimators: int = 100
 
 
 class FitRequest(BaseModel):
-    model: Literal["logistic", "svm", "catboost", "xgboost"]
-    config: LogisticConfig | SVMConfig | CatBoostConfig | XGBoostConfig
+    model: Literal["logistic", "svm", "catboost", "xgboost", "lightgbm"]
+    config: LogisticConfig | SVMConfig | CatBoostConfig | XGBoostConfig | LightGBMConfig
 
 
 class TextPredictionRequest(BaseModel):
