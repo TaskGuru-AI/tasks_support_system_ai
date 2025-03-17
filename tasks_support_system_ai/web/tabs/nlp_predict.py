@@ -103,7 +103,7 @@ def nlp_display_result_text():
     if "cluster_from_text" in st.session_state:
         if len(st.session_state["cluster_from_text"]) == 1:
             with st.expander(label="Для введённого текста был определён следующий кластер:"):
-                st.write(f"{CLUSTERS_MAP[st.session_state["cluster_from_text"][0]]}")
+                st.write(f"{CLUSTERS_MAP[st.session_state['cluster_from_text'][0]]}")
         else:
             with st.expander(label="Для введённого текста были определены следующие кластеры:"):
                 for class_from_text in st.session_state["cluster_from_text"]:
