@@ -1,0 +1,64 @@
+activation: ReLU
+batch_norm: false
+dropout: 0.0
+expansion_coefficient_dim: 5
+generic_architecture: true
+input_chunk_length: 30
+input_dim: 37
+layer_widths:
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+- 256
+likelihood: null
+lr_scheduler_cls: null
+lr_scheduler_kwargs: null
+nr_params: 1
+num_blocks: 1
+num_layers: 4
+num_stacks: 30
+optimizer_cls: !!python/name:torch.optim.adamw.AdamW ''
+optimizer_kwargs:
+  lr: 0.0003
+output_chunk_length: 7
+output_chunk_shift: 0
+output_dim: 1
+train_sample_shape:
+- !!python/tuple
+  - 30
+  - 1
+- !!python/tuple
+  - 30
+  - 36
+- null
+- !!python/tuple
+  - 7
+  - 1
+trend_polynomial_degree: 2
+use_reversible_instance_norm: false

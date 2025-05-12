@@ -1,0 +1,31 @@
+dropout: 0.0
+hidden_dim: 25
+input_chunk_length: 30
+input_size: 4
+likelihood: null
+lr_scheduler_cls: null
+lr_scheduler_kwargs: null
+name: LSTM
+nr_params: 1
+num_layers: 1
+optimizer_cls: !!python/name:torch.optim.adamw.AdamW ''
+optimizer_kwargs:
+  lr: 0.0003
+output_chunk_length: 1
+output_chunk_shift: 0
+target_size: 1
+train_sample_shape:
+- !!python/tuple
+  - 36
+  - 1
+- !!python/tuple
+  - 36
+  - 3
+- !!python/tuple
+  - 36
+  - 3
+- null
+- !!python/tuple
+  - 36
+  - 1
+use_reversible_instance_norm: false
