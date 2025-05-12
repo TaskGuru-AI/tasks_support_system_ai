@@ -4,8 +4,8 @@ ENV PIP_DEFAULT_TIMEOUT=100
 # install libgomp1
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        libgomp1 \
-        curl \
+        libgomp1 # noqa: DL3008 \
+        curl # noqa: DL3008 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
