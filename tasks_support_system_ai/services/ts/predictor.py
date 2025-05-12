@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from catboost import CatBoostRegressor
 from darts import TimeSeries
+from darts.dataprocessing.transformers import Scaler
 from darts.metrics import mae, mape, rmse
 from darts.models import (
     CatBoostModel,
@@ -14,13 +15,14 @@ from darts.models import (
     LinearRegressionModel,
     NaiveSeasonal,
     Prophet,
+    RNNModel,
 )
 
 from tasks_support_system_ai.api.models.ts import ModelConfig
 from tasks_support_system_ai.core.logger import backend_logger as logger
 from tasks_support_system_ai.data.reader import DataConversion, TSDataIntersection
 
-ModelType = Literal["naive", "es", "prophet", "catboost", "linear"]
+ModelType = Literal["naive", "es", "prophet", "catboost", "linear", "rnn"]
 
 
 class ModelMetrics:
@@ -47,6 +49,7 @@ class TSPredictor:
     def __init__(self, data_service: TSDataIntersection):
         self.data_service = data_service
         self.trained_models: dict[tuple[int, ModelType], object] = {}
+        self.scaler = Scaler()
 
     def create_time_features(self, df, date_col="date"):
         """Создает временные признаки: день недели, месяц, год и другие."""
@@ -101,6 +104,20 @@ class TSPredictor:
             )
         elif model_type == "linear":
             return LinearRegressionModel(lags=10, output_chunk_length=30)
+        elif model_type == "rnn":
+            return RNNModel(
+                model="LSTM",
+                input_chunk_length=28,
+                training_length=30,
+                hidden_dim=128,
+                dropout=0.1,
+                n_rnn_layers=2,
+                optimizer_kwargs={"lr": 1e-3},
+                pl_trainer_kwargs={
+                    "accelerator": "cpu",
+                },
+                n_epochs=100,
+            )
         else:
             raise ValueError(f"Unknown model type: {model_type}")
 
@@ -139,11 +156,17 @@ class TSPredictor:
             model = self._create_model(model_type, output_chunk_length=forecast_horizon)
 
             # Обучение модели
-            model.fit(train_ts)
+            if model_type == "rnn":
+                train_ts_scaled = self.scaler.fit_transform(train_ts)
+                model.fit(train_ts_scaled)
+            else:
+                model.fit(train_ts)
 
             # Расчет метрик, если есть тестовые данные
             if test_ts and len(test_ts) > 0:
                 pred_ts = model.predict(len(test_ts))
+                if model_type == "rnn":
+                    pred_ts = self.scaler.inverse_transform(pred_ts)
 
                 # Расчет метрик
                 rmse_val = rmse(test_ts, pred_ts)
@@ -203,6 +226,10 @@ class TSPredictor:
             model = self.trained_models[model_key]
 
             forecast_ts = model.predict(forecast_horizon)
+
+            if model_type == "rnn":
+                forecast_ts = self.scaler.inverse_transform(forecast_ts)
+
             # для катбуста плывут индексы из-за своей логики
             if model_type == "catboost" and forecast_start_date:
                 import pandas as pd
@@ -216,7 +243,7 @@ class TSPredictor:
 
                 df = pd.DataFrame({"new_tickets": forecast_values}, index=correct_index)
                 forecast_ts = TimeSeries.from_dataframe(df)
-            logger.info(f"Corrected CatBoost forecast to start from {forecast_start_date}")
+                logger.info(f"Corrected CatBoost forecast to start from {forecast_start_date}")
 
             return forecast_ts
 
@@ -240,7 +267,7 @@ class TSPredictor:
         """
         results = {}
 
-        for model_type in ["naive", "es", "prophet", "catboost", "linear"]:
+        for model_type in ["naive", "es", "prophet", "catboost", "linear", "rnn"]:
             try:
                 model, metrics = self.train_model(
                     queue_id, model_type, forecast_horizon=forecast_horizon
@@ -299,6 +326,7 @@ def train_model_process(ts: TimeSeries, model_config: ModelConfig, models_dir: s
             "naive": NaiveSeasonal,
             "prophet": Prophet,
             "catboost": CatBoostModel,
+            "rnn": RNNModel,
         }
 
         if model_type not in MODEL_TYPES:

@@ -454,16 +454,18 @@ def create_forecast_tab():  # noqa
             "Prophet",
             "CatBoost",
             "Линейная регрессия",
+            "Рекуррентная нейронная сеть",
         ]
     )
 
-    model_types = ["naive", "es", "prophet", "catboost", "linear"]
+    model_types = ["naive", "es", "prophet", "catboost", "linear", "rnn"]
     model_names = {
         "naive": "Наивная модель",
         "es": "Экспоненциальное сглаживание",
         "prophet": "Prophet",
         "catboost": "CatBoost",
         "linear": "Линейная регрессия",
+        "rnn": "Рекуррентная нейронная сеть",
     }
 
     # Фиксированная дата для демонстрации
@@ -537,6 +539,8 @@ def create_forecast_tab():  # noqa
                     st.info(
                         "Линейная регрессия с временными признаками - простая, но эффективная модель для рядов с линейным трендом."  # noqa: E501
                     )
+                elif model_type == "rnn":
+                    st.info("Рекуррентная нейронная сеть. Хорошо справляется с нелинейностями.")
 
             with col2:
                 train_button = st.button("Обучить модель", key=f"train_{model_type}")
@@ -618,6 +622,7 @@ def create_forecast_tab():  # noqa
             "prophet": "orange",
             "catboost": "purple",
             "linear": "brown",
+            "rnn": "blue",
         }
 
         for model_type, pred_data in st.session_state.forecasting_models[queue_id].items():

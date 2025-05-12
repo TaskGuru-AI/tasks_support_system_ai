@@ -1,10 +1,12 @@
 FROM python:3.12-slim AS base
 ENV PIP_DEFAULT_TIMEOUT=100
 
+# hadolint global ignore=DL3008,DL3009
 # install libgomp1
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libgomp1=12.2.0-14 \
-    && apt-get install -y --no-install-recommends curl=7.88.1-10+deb12u8 \
+    && apt-get install -y --no-install-recommends \
+        libgomp1 \
+        curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
