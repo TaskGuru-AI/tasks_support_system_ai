@@ -1,11 +1,12 @@
 FROM python:3.12-slim AS base
 ENV PIP_DEFAULT_TIMEOUT=100
 
+# hadolint global ignore=DL3008,DL3009
 # install libgomp1
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        libgomp1 # noqa: DL3008 \
-        curl # noqa: DL3008 \
+        libgomp1 \
+        curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
