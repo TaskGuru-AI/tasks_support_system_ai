@@ -14,13 +14,14 @@ from darts.models import (
     LinearRegressionModel,
     NaiveSeasonal,
     Prophet,
+    RNNModel,
 )
 
 from tasks_support_system_ai.api.models.ts import ModelConfig
 from tasks_support_system_ai.core.logger import backend_logger as logger
 from tasks_support_system_ai.data.reader import DataConversion, TSDataIntersection
 
-ModelType = Literal["naive", "es", "prophet", "catboost", "linear"]
+ModelType = Literal["naive", "es", "prophet", "catboost", "linear", "rnn"]
 
 
 class ModelMetrics:
@@ -101,6 +102,8 @@ class TSPredictor:
             )
         elif model_type == "linear":
             return LinearRegressionModel(lags=10, output_chunk_length=30)
+        elif model_type == "rnn":
+            return RNNModel(model="LSTM", output_chunk_length=30, input_chunk_length=10)
         else:
             raise ValueError(f"Unknown model type: {model_type}")
 
@@ -240,7 +243,7 @@ class TSPredictor:
         """
         results = {}
 
-        for model_type in ["naive", "es", "prophet", "catboost", "linear"]:
+        for model_type in ["naive", "es", "prophet", "catboost", "linear", "rnn"]:
             try:
                 model, metrics = self.train_model(
                     queue_id, model_type, forecast_horizon=forecast_horizon
@@ -299,6 +302,7 @@ def train_model_process(ts: TimeSeries, model_config: ModelConfig, models_dir: s
             "naive": NaiveSeasonal,
             "prophet": Prophet,
             "catboost": CatBoostModel,
+            "rnn": RNNModel,
         }
 
         if model_type not in MODEL_TYPES:

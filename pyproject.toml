@@ -19,7 +19,7 @@ catboost = "^1.2.7"
 streamlit = "^1.40.2"
 watchdog = "^6.0.0"
 fastapi = {extras = ["standard"], version = "^0.115.5"}
-u8darts = {extras = ["notorch"], version = "^0.31.0"}
+u8darts = {extras = ["all"], version = "^0.35.0"}
 minio = "^7.2.12"
 python-dotenv = "^1.0.1"
 uuid = "^1.30"

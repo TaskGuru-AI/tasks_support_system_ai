@@ -25,6 +25,7 @@ class ForecastModelType(str, Enum):
     PROPHET = "prophet"
     CATBOOST = "catboost"
     LINEAR = "linear"
+    RNN = "rnn"
 
 
 class ModelMetricsResponse(BaseModel):
