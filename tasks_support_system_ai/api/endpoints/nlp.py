@@ -29,6 +29,10 @@ nlp_predictor = NLPPredictor(nlp_tickets_data)
 
 @router.post("/api/fit_nlp")
 async def fit_nlp(request: FitRequest) -> str:
+    """
+    Train NLP model
+    :return: id
+    """
     loop = asyncio.get_event_loop()
     model_id = await loop.run_in_executor(
         executor, nlp_predictor.train, request.model, request.config
@@ -39,6 +43,10 @@ async def fit_nlp(request: FitRequest) -> str:
 
 @router.get("/api/statistics/{id}", response_model=ClassificationReport)
 async def get_statistics(id: str):
+    """
+    Get statistics for NLP model
+    :return: classification report
+    """
     try:
         classification_report_data = nlp_predictor.get_classification_report(id)
         return ClassificationReport(
@@ -58,8 +66,26 @@ async def get_statistics(id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/api/get_models", response_model=list)
+async def get_models():
+    """
+    Get list of trained NLP models
+    :return: List of models
+    """
+    try:
+        return nlp_predictor.get_models()
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.delete("/api/remove_nlp/{id}", response_model=SuccessResponse)
 async def remove_nlp_model(id: str):
+    """
+        Remove NLP model
+    :param id:
+    :return: HTTP response
+    """
     try:
         nlp_predictor.remove_model(id)
         return SuccessResponse(status="success", message=f"model {id} was successfully removed")
@@ -69,6 +95,11 @@ async def remove_nlp_model(id: str):
 
 @router.post("/api/predict_nlp", response_model=ClustersResponse)
 async def predict_nlp(request: TextPredictionRequest):
+    """
+        Predict clusters for test
+    :param request:
+    :return: list of clusters
+    """
     try:
         loop = asyncio.get_event_loop()
         clusters = await loop.run_in_executor(
@@ -87,7 +118,16 @@ async def predict_nlp(request: TextPredictionRequest):
 async def predict_nlp_file(
     id: str, file: Annotated[UploadFile, File(description="CSV file with data")]
 ) -> StreamingResponse:
+    """
+        Predict clusters for test
+    :param id:
+    :param file:
+    :return: csv file with clusters
+    """
     try:
+        if id not in nlp_predictor.get_models():
+            raise HTTPException(status_code=404, detail="Model not found")
+
         df = await upload_file(file)
 
         loop = asyncio.get_event_loop()

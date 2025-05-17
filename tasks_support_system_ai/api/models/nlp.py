@@ -36,9 +36,17 @@ class LightGBMConfig(BaseModel):
     n_estimators: int = 100
 
 
+class BertConfig(BaseModel):
+    learning_rate: float = 2e-5
+    weight_decay: float = 0.01
+    num_epochs: int = 3
+
+
 class FitRequest(BaseModel):
-    model: Literal["logistic", "svm", "catboost", "xgboost", "lightgbm"]
-    config: LogisticConfig | SVMConfig | CatBoostConfig | XGBoostConfig | LightGBMConfig
+    model: Literal["logistic", "svm", "catboost", "xgboost", "lightgbm", "bert"]
+    config: (
+        LogisticConfig | SVMConfig | CatBoostConfig | XGBoostConfig | LightGBMConfig | BertConfig
+    )
 
 
 class TextPredictionRequest(BaseModel):
