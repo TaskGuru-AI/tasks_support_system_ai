@@ -33,6 +33,7 @@ xgboost = "^2.1.4"
 optuna = "^4.2.1"
 pytorch-lightning = "^2.5.1.post0"
 torch = {version = "^2.7.0+cu118", source = "pytorch-gpu-src"}
+transformers = "^4.51.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.3"

@@ -8,17 +8,25 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, roc_auc_score
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import SVC
+
+# from transformers import (
+#     AutoTokenizer,
+# )
 from xgboost import XGBClassifier
 
 # from imblearn.over_sampling import RandomOverSampler
 # from imblearn.under_sampling import RandomUnderSampler
 from tasks_support_system_ai.api.models.nlp import (
+    BertConfig,
     CatBoostConfig,
     LightGBMConfig,
     LogisticConfig,
     SVMConfig,
     XGBoostConfig,
 )
+
+# from torch.utils.data import DataLoader
+# from torch import nn
 from tasks_support_system_ai.core.logger import backend_logger as logger  # noqa: F401
 from tasks_support_system_ai.data.nlp.reader import NLPTicketsData
 from tasks_support_system_ai.services.nlp.model_service import ModelService
@@ -85,6 +93,8 @@ class NLPPredictor:
             return train_xgboost_model(self.train_data, self.test_data, config)
         elif model == "lightgbm":
             return train_lightgbm_model(self.train_data, self.test_data, config)
+        elif model == "bert":
+            return train_bert_model(self.train_data, self.test_data, config)
         else:
             raise ValueError("Invalid model name")
 
@@ -93,6 +103,9 @@ class NLPPredictor:
 
     def remove_model(self, model_id: str) -> None:
         model_service.remove_model(model_id)
+
+    def get_models(self) -> list:
+        return model_service.list_models()
 
 
 def train_logistic_model(train: pd.DataFrame, test: pd.DataFrame, config: SVMConfig) -> str:
@@ -286,3 +299,66 @@ def get_mean_vector(text, w2v_model):
     words = [w for w in text if w in w2v_model.wv]
     vector = np.mean(w2v_model.wv[words], axis=0) if words else np.zeros(w2v_model.vector_size)
     return vector
+
+
+def train_bert_model(train: pd.DataFrame, test: pd.DataFrame, config: BertConfig) -> str:
+    """
+    Method to train BERT classification model
+    :param config: Model configuration
+    :return: str: ID of the model
+    """
+    pass
+    # MODEL_NAME = "sberbank-ai/ruBert-base"
+    # tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+
+    # def preprocess_function(examples):
+    #     return tokenizer(
+    #         examples["text"],
+    #         padding="max_length",
+    #         truncation=True,
+    #         max_length=128,
+    #     )
+    #
+    # model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=10)
+    #
+    # training_args = TrainingArguments(
+    #     output_dir="./results",
+    #     evaluation_strategy="epoch",
+    #     save_strategy="no",
+    #     learning_rate=config.learning_rate,
+    #     per_device_train_batch_size=16,
+    #     per_device_eval_batch_size=16,
+    #     num_train_epochs=config.num_epochs,
+    #     weight_decay=config.weight_decay,
+    #     logging_steps=10,
+    #     logging_dir="./logs",
+    # )
+    #
+    # trainer = Trainer(
+    #     model=model,
+    #     args=training_args,
+    #     train_dataset=train_dataset,
+    #     eval_dataset=test_dataset,
+    #     tokenizer=tokenizer,
+    #     data_collator=DataCollatorWithPadding(tokenizer),
+    # )
+    #
+    # trainer.train()
+    #
+    # predictions = trainer.predict(test_dataset)
+    # y_pred_logits = predictions.predictions
+    # y_pred = np.argmax(y_pred_logits, axis=1)
+    # y_true = predictions.label_ids
+    #
+    # roc_auc = roc_auc_score(y_true, y_pred_logits, multi_class="ovr")
+    # report = classification_report(y_true, y_pred, output_dict=True, zero_division=0)
+    # report["roc_auc"] = roc_auc
+    #
+    # model_id = str(uuid.uuid4())
+    # model_path = f"./saved_models/{model_id}"
+    # model.save_pretrained(model_path)
+    #
+    # model_service.save(model, model_id)
+    # model_service.save_stats(model_id, report)
+    #
+    # return model_id
