@@ -11,7 +11,7 @@ def select_model():
     st.title("Обучение модели NLP")
     model_type = st.sidebar.selectbox(
         "Выберите модель для обучения:",
-        ["Logistic Regression", "SVM", "Catboost", "XGBoost", "LightGBM"],
+        ["Logistic Regression", "SVM", "Catboost", "XGBoost", "LightGBM", "RuBERT"],
         key="model_sb",
     )
     config = {}
@@ -49,18 +49,32 @@ def select_model():
             ),
         }
     elif model_type == "LightGBM":
-        config = {
-            "learning_rate": st.sidebar.number_input(
-                "Learning Rate", min_value=0.01, max_value=1.0, value=0.09, step=0.01
-            ),
-            "num_leaves": st.sidebar.number_input(
-                "Num Leaves", min_value=2, max_value=100, value=31
-            ),
-            "max_depth": st.sidebar.slider("Max Depth", min_value=3, max_value=16, value=8),
-            "n_estimators": st.sidebar.number_input(
-                "N Estimators", min_value=50, max_value=500, value=100
-            ),
-        }
+        config = (
+            {
+                "learning_rate": st.sidebar.number_input(
+                    "Learning Rate", min_value=0.01, max_value=1.0, value=0.09, step=0.01
+                ),
+                "num_leaves": st.sidebar.number_input(
+                    "Num Leaves", min_value=2, max_value=100, value=31
+                ),
+                "max_depth": st.sidebar.slider("Max Depth", min_value=3, max_value=16, value=8),
+                "n_estimators": st.sidebar.number_input(
+                    "N Estimators", min_value=50, max_value=500, value=100
+                ),
+            },
+        )
+    elif model_type == "RuBERT":
+        config = (
+            {
+                "learning_rate": st.sidebar.number_input(
+                    "Learning Rate", min_value=0.01, max_value=1.0, value=0.01, step=0.01
+                ),
+                "weight_decay": st.sidebar.number_input(
+                    "Weight Decay", min_value=0.01, max_value=0.1, value=0.01, step=0.01
+                ),
+                "num_epochs": st.sidebar.slider("Num Epochs", min_value=1, max_value=10, value=3),
+            },
+        )
     elif model_type == "SVM":
         config["C"] = st.sidebar.slider("Параметр C (регуляризация):", 0.01, 10.0, 1.0)
         config["kernel"] = st.sidebar.selectbox(
@@ -89,6 +103,7 @@ def select_model():
         "Catboost": "catboost",
         "LightGBM": "lightgbm",
         "XGBoost": "xgboost",
+        "RuBERT": "bert",
     }.get(model_type)
     return model, config
 
