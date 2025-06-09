@@ -12,6 +12,7 @@ from tasks_support_system_ai.utils.utils import get_correct_data_path
 class DataFrames(Enum):
     NLP_TICKETS_TRAIN = "nlp/nlp_tickets_train.csv"
     NLP_TICKETS_TEST = "nlp/nlp_tickets_test.csv"
+    NLP_TICKETS_BERT = "nlp/nlp_rubert_tickets.csv"
     W2V_MODEL = "nlp/word2vec.model"
 
 
@@ -25,6 +26,8 @@ def read_data(data: DataFrames) -> pd.DataFrame:
             return pd.read_csv(data_path, sep=";")
         case DataFrames.NLP_TICKETS_TEST:
             return pd.read_csv(data_path, sep=";")
+        case DataFrames.NLP_TICKETS_BERT:
+            return pd.read_csv(data_path, sep=";")
         case DataFrames.W2V_MODEL:
             return load_file(data_path)  # type: ignore[attr-defined]  # noqa: F821
         case _:
@@ -33,17 +36,22 @@ def read_data(data: DataFrames) -> pd.DataFrame:
 
 class NLPDataManager:
     def __init__(self):
-        self.dataframes = {"train": pd.DataFrame(), "test": pd.DataFrame()}
+        self.dataframes = {"train": pd.DataFrame(), "test": pd.DataFrame(), "bert": pd.DataFrame()}
         self.word2vec_model = None  # type: ignore[attr-defined]  # noqa: F821
 
     def load_data(self):
         if self.is_data_local():
             self.dataframes["train"] = read_data(DataFrames.NLP_TICKETS_TRAIN)
             self.dataframes["test"] = read_data(DataFrames.NLP_TICKETS_TEST)
+            self.dataframes["bert"] = read_data(DataFrames.NLP_TICKETS_BERT)
             self.word2vec_model = read_data(DataFrames.W2V_MODEL)
 
     def is_data_local(self) -> bool:
-        for df in (DataFrames.NLP_TICKETS_TRAIN, DataFrames.NLP_TICKETS_TEST):
+        for df in (
+            DataFrames.NLP_TICKETS_TRAIN,
+            DataFrames.NLP_TICKETS_TEST,
+            DataFrames.NLP_TICKETS_BERT,
+        ):
             if not Path(get_correct_data_path(df.value)).exists():
                 return False
         return True
@@ -58,6 +66,9 @@ class NLPTicketsData:
 
     def get_test_data(self):
         return self.data_manager.dataframes["test"]
+
+    def get_bert_data(self):
+        return self.data_manager.dataframes["bert"]
 
     def get_word2vec_model(self):
         return self.data_manager.word2vec_model

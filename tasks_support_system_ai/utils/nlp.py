@@ -15,11 +15,20 @@ def save(model, file_path: str) -> None:
         print(f"Model saved to {file_path}")
 
 
-def delete(file_path: str) -> None:
-    if Path.exists(file_path):
-        Path.unlink(file_path)
-    else:
+def delete(file_path: str | Path) -> None:
+    path = Path(file_path)
+    if not path.exists():
         raise FileNotFoundError("Model not found")
+
+    if path.is_dir():
+        for sub in path.iterdir():
+            if sub.is_dir():
+                delete(sub)
+            else:
+                sub.unlink()
+        path.rmdir()
+    else:
+        path.unlink()
 
 
 def load_file(file_path: str) -> None:
@@ -55,3 +64,19 @@ async def upload_file(file: UploadFile):
         return df
     except Exception as e:
         return {"error": str(e)}
+
+
+def tokenize_texts(texts, tokenizer):
+    """
+        Tokenize and preprocess text data
+    :param texts:
+    :param tokenizer:
+    :return:
+    """
+    return tokenizer(
+        texts,
+        padding="max_length",
+        truncation=True,
+        max_length=128,
+        return_tensors=None,
+    )
